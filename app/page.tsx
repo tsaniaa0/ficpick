@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-// Data simulasi AU (Nanti data ini diambil dari Database)
-const MOCK_AUS = [
+// Data simulasi awal AU
+const INITIAL_AUS = [
   {
     id: "1",
     title: "Project: High School Romance",
@@ -26,21 +26,32 @@ const MOCK_AUS = [
     hasNSFW: false,
     hint: "",
   },
-  {
-    id: "3",
-    title: "Dosen Killer & Mahasiswa Abadi",
-    author: "@midnight_reads",
-    fandom: "BTS / Jungkook",
-    status: "Plan to Read",
-    lastChapter: "Belum dibaca",
-    coverUrl: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
-    hasNSFW: true,
-    hint: "Password: Judul lagu debut",
-  },
 ];
 
 export default function Home() {
+  const [aus, setAus] = useState(INITIAL_AUS);
   const [filter, setFilter] = useState("All");
+  const [inputUrl, setInputUrl] = useState("");
+
+  // Fungsi untuk menambah AU baru ke dalam binder
+  const handleAddAU = () => {
+    if (!inputUrl.trim()) return;
+
+    const newAU = {
+      id: Date.now().toString(),
+      title: inputUrl.includes("http") ? "AU Baru dari Link Twitter" : inputUrl,
+      author: "@author_baru",
+      fandom: "K-Pop / AU",
+      status: "Plan to Read",
+      lastChapter: "Part 1 - Baru Ditambahkan",
+      coverUrl: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
+      hasNSFW: false,
+      hint: "Belum ada hint",
+    };
+
+    setAus([newAU, ...aus]); // Tambahkan ke paling atas binder
+    setInputUrl(""); // Kosongkan kolom input
+  };
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
@@ -66,14 +77,19 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        {/* Input Bar */}
+        {/* Form Paste Link AU */}
         <div className="pt-2 max-w-xl mx-auto flex gap-2">
           <input
             type="text"
-            placeholder="Paste link tweet AU di sini..."
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+            placeholder="Ketik judul atau paste link tweet AU..."
             className="flex-1 px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-pink-500 text-sm text-slate-200 placeholder-slate-500"
           />
-          <button className="px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-semibold text-white rounded-xl hover:opacity-90 text-sm transition shrink-0">
+          <button
+            onClick={handleAddAU}
+            className="px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-semibold text-white rounded-xl hover:opacity-90 text-sm transition shrink-0 active:scale-95"
+          >
             + Tambah AU
           </button>
         </div>
@@ -83,7 +99,9 @@ export default function Home() {
       <section className="max-w-5xl mx-auto space-y-6">
         {/* Filter Tab */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-lg font-bold text-slate-200">Binder Bacaan Saya</h3>
+          <h3 className="text-lg font-bold text-slate-200">
+            Binder Bacaan Saya ({aus.length})
+          </h3>
           <div className="flex gap-2">
             {["All", "Reading", "Finished", "Plan to Read"].map((status) => (
               <button
@@ -101,68 +119,66 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Grid Kartu AU (Photocard Ratio 2:3) */}
+        {/* Grid Kartu AU */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_AUS.filter((au) => filter === "All" || au.status === filter).map((au) => (
-            <div
-              key={au.id}
-              className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-pink-500/40 transition group flex flex-col justify-between"
-            >
-              {/* Cover Image (Photocard Style Aspect Ratio) */}
-              <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-800">
-                <img
-                  src={au.coverUrl}
-                  alt={au.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                />
-                {/* Badge Status */}
-                <span
-                  className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-md ${
-                    au.status === "Reading"
-                      ? "bg-amber-500/80 text-white"
-                      : au.status === "Finished"
-                      ? "bg-emerald-500/80 text-white"
-                      : "bg-blue-500/80 text-white"
-                  }`}
-                >
-                  {au.status}
-                </span>
-
-                {/* Badge NSFW / Privatter jika ada */}
-                {au.hasNSFW && (
-                  <span className="absolute top-3 right-3 bg-red-500/90 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wider">
-                    18+ / PRIVATTER
+          {aus
+            .filter((au) => filter === "All" || au.status === filter)
+            .map((au) => (
+              <div
+                key={au.id}
+                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-pink-500/40 transition group flex flex-col justify-between"
+              >
+                {/* Cover Image */}
+                <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-800">
+                  <img
+                    src={au.coverUrl}
+                    alt={au.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <span
+                    className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-md ${
+                      au.status === "Reading"
+                        ? "bg-amber-500/80 text-white"
+                        : au.status === "Finished"
+                        ? "bg-emerald-500/80 text-white"
+                        : "bg-blue-500/80 text-white"
+                    }`}
+                  >
+                    {au.status}
                   </span>
-                )}
-              </div>
 
-              {/* Detail AU */}
-              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold text-pink-400 uppercase tracking-wider">
-                    {au.fandom}
-                  </span>
-                  <h4 className="font-bold text-slate-100 text-base leading-snug line-clamp-1 group-hover:text-pink-400 transition">
-                    {au.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 mt-0.5">{au.author}</p>
+                  {au.hasNSFW && (
+                    <span className="absolute top-3 right-3 bg-red-500/90 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wider">
+                      18+ / PRIVATTER
+                    </span>
+                  )}
                 </div>
 
-                {/* Penanda Jejak / Last Read */}
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 text-xs space-y-1">
-                  <p className="text-slate-500 text-[10px] font-semibold">JEJAK BACA TERAKHIR:</p>
-                  <p className="text-slate-300 font-medium truncate">{au.lastChapter}</p>
-                </div>
-
-                {/* Hint Password Box (jika ada) */}
-                {au.hint && (
-                  <div className="bg-pink-950/30 border border-pink-500/20 p-2 rounded-lg text-[11px] text-pink-300 flex items-center gap-1.5">
-                    🔒 <span>{au.hint}</span>
+                {/* Detail AU */}
+                <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[11px] font-semibold text-pink-400 uppercase tracking-wider">
+                      {au.fandom}
+                    </span>
+                    <h4 className="font-bold text-slate-100 text-base leading-snug line-clamp-1 group-hover:text-pink-400 transition">
+                      {au.title}
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-0.5">{au.author}</p>
                   </div>
-                )}
+
+                  <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800/80 text-xs space-y-1">
+                    <p className="text-slate-500 text-[10px] font-semibold">JEJAK BACA TERAKHIR:</p>
+                    <p className="text-slate-300 font-medium truncate">{au.lastChapter}</p>
+                  </div>
+
+                  {au.hint && (
+                    <div className="bg-pink-950/30 border border-pink-500/20 p-2 rounded-lg text-[11px] text-pink-300 flex items-center gap-1.5">
+                      🔒 <span>{au.hint}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </section>
     </main>
