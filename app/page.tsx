@@ -12,8 +12,10 @@ import FilterBar from "@/components/FilterBar";
 import AuCard from "@/components/AuCard";
 import AddAuModal from "@/components/AddAuModal";
 import AuDetailModal from "@/components/AuDetailModal";
+import EditAuModal from "@/components/EditAuModal";
 import LoginModal from "@/components/LoginModal";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import Taskbar from "@/components/Taskbar";
 
 export default function Home() {
   const [aus, setAus] = useState<AU[]>(INITIAL_AUS);
@@ -29,8 +31,9 @@ export default function Home() {
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState("");
-
+  const [newProgressUrl, setNewProgressUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Review Form State
@@ -46,6 +49,7 @@ export default function Home() {
     fandom: "",
     linkUrl: "",
     hint: "",
+    coverUrl: "",
     hasNSFW: false,
   });
 
@@ -85,7 +89,9 @@ export default function Home() {
       fandom: newForm.fandom || "K-Pop AU",
       status: "Plan to Read",
       lastChapter: "Part 1 - Baru Ditambahkan",
-      coverUrl: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
+      coverUrl:
+        newForm.coverUrl ||
+        "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
       hasNSFW: newForm.hasNSFW,
       hint: newForm.hint || "",
       linkUrl: newForm.linkUrl || "https://twitter.com",
@@ -130,7 +136,15 @@ export default function Home() {
       console.error("❌ ERROR KONEKSI:", err);
     }
 
-    setNewForm({ title: "", author: "", fandom: "", linkUrl: "", hint: "", hasNSFW: false });
+    setNewForm({
+      title: "",
+      author: "",
+      fandom: "",
+      linkUrl: "",
+      hint: "",
+      coverUrl: "",
+      hasNSFW: false,
+    });
     setIsAddModalOpen(false);
   };
 
@@ -196,12 +210,42 @@ export default function Home() {
       const updatedAus = aus.filter((item) => item.id !== id);
       saveToStorage(updatedAus);
       setSelectedAU(null);
-      setIsReaderMode(false);
+    }
+  };
+
+  const handleSaveEditAU = async (updatedAU: AU) => {
+    const updatedAus = aus.map((item) => (item.id === updatedAU.id ? updatedAU : item));
+    saveToStorage(updatedAus);
+    setSelectedAU(updatedAU);
+
+    try {
+      const { error } = await supabase
+        .from("aus")
+        .update({
+          title: updatedAU.title,
+          author: updatedAU.author,
+          fandom: updatedAU.fandom,
+          cover_url: updatedAU.coverUrl,
+          link_url: updatedAU.linkUrl,
+          hint: updatedAU.hint,
+          has_nsfw: updatedAU.hasNSFW,
+        })
+        .eq("id", updatedAU.id);
+
+      if (error) {
+        console.error("❌ ERROR UPDATE SUPABASE:", error.message);
+      } else {
+        console.log("✅ BERHASIL UPDATE DI SUPABASE!");
+        showToast("✏️ AU Berhasil Diperbarui!");
+      }
+    } catch (err) {
+      console.error("❌ ERROR KONEKSI:", err);
     }
   };
 
   const handleExportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(aus, null, 2));
+    const dataStr =
+      "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(aus, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `ficpick_backup_${Date.now()}.json`);
@@ -230,7 +274,9 @@ export default function Home() {
   };
 
   const handleShareBinder = () => {
-    const titles = aus.map((a, i) => `${i + 1}. ${a.title} (${a.fandom}) - ${a.status}`).join("\n");
+    const titles = aus
+      .map((a, i) => `${i + 1}. ${a.title} (${a.fandom}) - ${a.status}`)
+      .join("\n");
     const textToCopy = `✨ Rak Buku AU FicPick Saya ✨\n\n${titles}\n\nDisimpan rapi di FicPick ✨`;
     navigator.clipboard.writeText(textToCopy);
     showToast("📋 Ringkasan Binder Berhasil Disalin!");
@@ -282,7 +328,8 @@ export default function Home() {
           : au.status === filter;
 
       const matchesFandom =
-        fandomFilter === "All" || au.fandom.toLowerCase().includes(fandomFilter.toLowerCase());
+        fandomFilter === "All" ||
+        au.fandom.toLowerCase().includes(fandomFilter.toLowerCase());
 
       const matchesSearch =
         au.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -298,13 +345,59 @@ export default function Home() {
     });
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#7cb9e8] via-[#a2d2ff] via-70% to-[#4e9f3d] text-slate-900 p-4 md:p-8 pb-24 md:pb-8 font-sans selection:bg-[#b5ff36]">
+    <main className="min-h-screen bg-gradient-to-b from-[#7cb9e8] via-[#a2d2ff] via-70% to-[#4e9f3d] text-slate-900 p-4 md:p-8 pb-24 md:pb-16 font-sans relative overflow-x-hidden selection:bg-[#b5ff36]">
+      {/* Toast Notification */}
       {copiedNotification && (
         <div className="fixed top-5 right-5 z-50 bg-emerald-500 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold animate-bounce flex items-center gap-2">
           {copiedNotification}
         </div>
       )}
 
+      {/* DESKTOP SHORTCUTS (Kiri Layar - Khusus Desktop) */}
+      <div className="hidden xl:flex flex-col gap-6 absolute top-8 left-6 z-10 select-none">
+        <div className="flex flex-col items-center gap-1 cursor-pointer group w-20 text-center">
+          <div className="w-12 h-12 bg-[#ece9d8] border-2 border-black flex items-center justify-center text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#b5ff36]">
+            🖥️
+          </div>
+          <span className="text-[11px] font-bold text-black bg-white/90 border border-black px-1">
+            My Computer
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-1 cursor-pointer group w-20 text-center">
+          <div className="w-12 h-12 bg-[#ece9d8] border-2 border-black flex items-center justify-center text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#b5ff36]">
+            📁
+          </div>
+          <span className="text-[11px] font-bold text-black bg-white/90 border border-black px-1">
+            Bookmark_AU
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-1 cursor-pointer group w-20 text-center">
+          <div className="w-12 h-12 bg-[#ece9d8] border-2 border-black flex items-center justify-center text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#b5ff36]">
+            🗑️
+          </div>
+          <span className="text-[11px] font-bold text-black bg-white/90 border border-black px-1">
+            Recycle Bin
+          </span>
+        </div>
+      </div>
+
+      {/* STICKY NOTE WIDGET (Kanan Layar - Khusus Desktop) */}
+      <div className="hidden xl:block absolute top-20 right-6 z-10 w-56 bg-[#ffffa0] border-2 border-black p-3 shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] rotate-1">
+        <div className="border-b-2 border-black pb-1 mb-2 flex justify-between items-center">
+          <span className="text-[10px] font-black font-mono uppercase text-black">
+            📌 Quick_Notes.txt
+          </span>
+          <span className="text-xs cursor-pointer">✕</span>
+        </div>
+        <p className="text-xs font-mono font-bold text-slate-800 leading-relaxed">
+          • Jgn lupa cek update AU Jaemin jam 8 mlm!⚡
+          <br />• Password Privatter ada di detail card.
+        </p>
+      </div>
+
+      {/* KOMPONEN UTAMA WEBSITE */}
       <Header
         theme={theme}
         changeTheme={changeTheme}
@@ -347,10 +440,24 @@ export default function Home() {
           setFilter={setFilter}
         />
 
-        {/* Grid Kartu AU */}
+        {/* Grid Kartu AU / Empty State */}
         {filteredAus.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 text-sm space-y-2">
-            <p>😴 Belum ada AU yang cocok di binder kamu.</p>
+          <div className="bg-[#ece9d8] border-2 border-black p-8 text-center max-w-md mx-auto my-8 shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] space-y-3">
+            <div className="w-16 h-16 bg-[#b5ff36] border-2 border-black mx-auto flex items-center justify-center text-3xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              📁
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-black text-black text-base">Binder Masih Kosong!</h4>
+              <p className="text-xs font-bold text-slate-700">
+                Belum ada AU yang disimpan. Klik tombol di bawah untuk menambah bacaan pertamamu.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-2 bg-[#b5ff36] hover:bg-[#a3eb25] text-black font-black text-xs border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+            >
+              ✨ + Simpan AU Baru
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -386,6 +493,8 @@ export default function Home() {
         setIsEditingProgress={setIsEditingProgress}
         newProgress={newProgress}
         setNewProgress={setNewProgress}
+        newProgressUrl={newProgressUrl}
+        setNewProgressUrl={setNewProgressUrl}
         onUpdateChapter={handleUpdateChapter}
         newRating={newRating}
         setNewRating={setNewRating}
@@ -397,6 +506,14 @@ export default function Home() {
         showSpoilers={showSpoilers}
         setShowSpoilers={setShowSpoilers}
         onDeleteAU={handleDeleteAU}
+        onOpenEdit={() => setIsEditModalOpen(true)}
+      />
+
+      <EditAuModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        selectedAU={selectedAU}
+        onSaveEdit={handleSaveEditAU}
       />
 
       <LoginModal
@@ -411,6 +528,9 @@ export default function Home() {
         username={username}
         onOpenLogin={() => setIsLoginOpen(true)}
       />
+
+      {/* TASKBAR BOTTOM */}
+      <Taskbar />
     </main>
   );
 }

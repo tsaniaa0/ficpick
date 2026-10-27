@@ -8,6 +8,8 @@ interface AuDetailModalProps {
   setIsEditingProgress: (editing: boolean) => void;
   newProgress: string;
   setNewProgress: (val: string) => void;
+  newProgressUrl: string;
+  setNewProgressUrl: (val: string) => void;
   onUpdateChapter: () => void;
   newRating: number;
   setNewRating: (rating: number) => void;
@@ -19,6 +21,7 @@ interface AuDetailModalProps {
   showSpoilers: { [key: string]: boolean };
   setShowSpoilers: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
   onDeleteAU: (id: string) => void;
+  onOpenEdit: () => void;
 }
 
 export default function AuDetailModal({
@@ -29,6 +32,8 @@ export default function AuDetailModal({
   setIsEditingProgress,
   newProgress,
   setNewProgress,
+  newProgressUrl,
+  setNewProgressUrl,
   onUpdateChapter,
   newRating,
   setNewRating,
@@ -40,47 +45,52 @@ export default function AuDetailModal({
   showSpoilers,
   setShowSpoilers,
   onDeleteAU,
+  onOpenEdit,
 }: AuDetailModalProps) {
   if (!selectedAU) return null;
+
+  const activeLink = selectedAU.lastChapterUrl || selectedAU.linkUrl || "#";
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto py-8">
       <div className="bg-[#ece9d8] border-2 border-black rounded-t-lg max-w-md w-full shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative my-auto overflow-hidden">
         
-        {/* Retro Title Bar */}
+        {/* Title Bar */}
         <div className="bg-gradient-to-r from-[#000080] via-[#1084d0] to-[#000080] text-white px-2.5 py-1 text-xs font-bold flex justify-between items-center border-b-2 border-black select-none">
           <span className="truncate flex items-center gap-1.5 font-mono">
             💾 AU_Properties.exe
           </span>
-          <div className="flex gap-1">
-            <button className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center">
-              _
-            </button>
-            <button className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center">
-              ◽
-            </button>
-            <button 
-              onClick={onClose}
-              className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center hover:bg-red-500 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center hover:bg-red-500 hover:text-white"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Content Body */}
         <div className="p-5 space-y-4 font-sans text-black">
-          {/* Header Info */}
-          <div>
-            <span className="text-[10px] font-extrabold uppercase bg-white border border-black px-2 py-0.5 text-black font-mono">
-              {selectedAU.fandom}
-            </span>
-            <div className="mt-2 inline-block bg-[#b5ff36] border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] max-w-full">
-              <h3 className="text-lg font-black leading-tight text-black truncate">
-                {selectedAU.title}
-              </h3>
+          {/* Header Info dengan Tombol Edit Detail */}
+          <div className="flex justify-between items-start gap-2">
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold uppercase bg-white border border-black px-2 py-0.5 text-black font-mono">
+                {selectedAU.fandom}
+              </span>
+              <div className="block bg-[#b5ff36] border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <h3 className="text-lg font-black leading-tight text-black truncate">
+                  {selectedAU.title}
+                </h3>
+              </div>
+              <p className="text-xs font-bold text-slate-700">Karya oleh {selectedAU.author}</p>
             </div>
-            <p className="text-xs font-bold text-slate-700 mt-1">Karya oleh {selectedAU.author}</p>
+
+            {/* Tombol Edit AU */}
+            <button
+              onClick={onOpenEdit}
+              className="px-3 py-1.5 bg-[#b5ff36] hover:bg-[#a3eb25] text-black font-black border-2 border-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 shrink-0"
+            >
+              ✏️ Edit AU
+            </button>
           </div>
 
           {/* Ubah Status Bacaan */}
@@ -115,28 +125,42 @@ export default function AuDetailModal({
                 onClick={() => setIsEditingProgress(!isEditingProgress)}
                 className="text-xs font-black text-blue-700 hover:underline"
               >
-                {isEditingProgress ? "Batal" : "✏️ Edit"}
+                {isEditingProgress ? "Batal" : "✏️ Edit Progress"}
               </button>
             </div>
 
             {isEditingProgress ? (
-              <div className="flex gap-2 pt-1">
+              <div className="space-y-2 pt-1">
                 <input
                   type="text"
                   defaultValue={selectedAU.lastChapter}
                   onChange={(e) => setNewProgress(e.target.value)}
-                  placeholder="Contoh: Part 45 - Berantem lagi"
-                  className="flex-1 px-2.5 py-1 bg-white border-2 border-black text-xs font-mono font-bold text-black focus:outline-none"
+                  placeholder="Contoh: Part 200"
+                  className="w-full px-2.5 py-1 bg-white border-2 border-black text-xs font-mono font-bold text-black focus:outline-none"
+                />
+                <input
+                  type="url"
+                  defaultValue={selectedAU.lastChapterUrl || ""}
+                  onChange={(e) => setNewProgressUrl(e.target.value)}
+                  placeholder="Paste Link Tweet Part Terakhir di sini..."
+                  className="w-full px-2.5 py-1 bg-amber-50 border-2 border-black text-xs font-mono font-bold text-black focus:outline-none"
                 />
                 <button
                   onClick={onUpdateChapter}
-                  className="px-3 py-1 bg-[#b5ff36] border-2 border-black text-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  className="w-full py-1 bg-[#b5ff36] border-2 border-black text-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5"
                 >
-                  Simpan
+                  💾 Simpan Progress Baru
                 </button>
               </div>
             ) : (
-              <p className="text-black text-xs font-bold font-mono truncate">{selectedAU.lastChapter}</p>
+              <div>
+                <p className="text-black text-xs font-bold font-mono truncate">{selectedAU.lastChapter}</p>
+                {selectedAU.lastChapterUrl && (
+                  <p className="text-[10px] text-emerald-700 font-bold font-mono truncate">
+                    🔗 Link Part Tersimpan
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
@@ -150,7 +174,7 @@ export default function AuDetailModal({
             </div>
           )}
 
-          {/* Seksi Review & Rating */}
+          {/* Ulasan & Rating */}
           <div className="border-t-2 border-black pt-3 space-y-2.5">
             <h4 className="text-xs font-black text-black font-mono uppercase">
               Ulasan Pembaca ({selectedAU.reviews?.length || 0})
@@ -193,7 +217,7 @@ export default function AuDetailModal({
                 </label>
                 <button
                   type="submit"
-                  className="px-3 py-1 bg-[#ece9d8] hover:bg-slate-200 text-black border-2 border-black text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  className="px-3 py-1 bg-[#ece9d8] hover:bg-slate-200 text-black border-2 border-black text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5"
                 >
                   Kirim Review
                 </button>
@@ -229,19 +253,19 @@ export default function AuDetailModal({
             </div>
           </div>
 
-          {/* Action Buttons Langsung */}
+          {/* Action Buttons */}
           <div className="pt-2 flex gap-2">
             <a
-              href={selectedAU.linkUrl || "#"}
+              href={activeLink}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 py-2.5 text-center bg-[#b5ff36] hover:bg-[#a3eb25] text-black font-black border-2 border-black text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 text-center bg-[#b5ff36] hover:bg-[#a3eb25] text-black font-black border-2 border-black text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-1.5"
             >
-              🚀 Buka Link Twitter / X
+              🚀 Lanjut Baca ({selectedAU.lastChapterUrl ? "Part Terakhir" : "Link Utama"})
             </a>
             <button
               onClick={() => onDeleteAU(selectedAU.id)}
-              className="px-3.5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-black border-2 border-black text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+              className="px-3.5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-black border-2 border-black text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 transition-all"
             >
               🗑️ Hapus
             </button>

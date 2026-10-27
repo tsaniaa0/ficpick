@@ -13,6 +13,7 @@ export interface AU {
   fandom: string;
   status: string;
   lastChapter: string;
+  lastChapterUrl?: string;
   coverUrl: string;
   hasNSFW: boolean;
   hint: string;
