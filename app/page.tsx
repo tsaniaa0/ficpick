@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 const INITIAL_AUS = [
   {
@@ -104,7 +105,7 @@ export default function Home() {
     localStorage.setItem("ficpick_aus", JSON.stringify(newAus));
   };
 
-  const handleAddAU = (e: React.FormEvent) => {
+  const handleAddAU = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newForm.title.trim()) return;
 
@@ -127,8 +128,43 @@ export default function Home() {
       reviews: [],
     };
 
+    // 1. Simpan ke LocalStorage agar langsung tampil di UI
     const updated = [newAU, ...aus];
-    saveToStorage(updated);
+    setAus(updated);
+    localStorage.setItem("ficpick_aus", JSON.stringify(updated));
+
+    // 2. Kirim data ke Supabase Cloud
+    try {
+      const { data, error } = await supabase.from("aus").insert([
+        {
+          id: newAU.id,
+          title: newAU.title,
+          author: newAU.author,
+          fandom: newAU.fandom,
+          status: newAU.status,
+          last_chapter: newAU.lastChapter,
+          cover_url: newAU.coverUrl,
+          has_nsfw: newAU.hasNSFW,
+          hint: newAU.hint,
+          link_url: newAU.linkUrl,
+          content_snippet: newAU.contentSnippet,
+          is_favorite: newAU.isFavorite,
+          has_new_update: newAU.hasNewUpdate,
+          rating: newAU.rating,
+          created_at: newAU.createdAt,
+        },
+      ]);
+
+      if (error) {
+        console.error("❌ ERROR DARI SUPABASE:", error.message, error.details);
+        alert("Gagal simpan ke Supabase: " + error.message);
+      } else {
+        console.log("✅ BERHASIL SIMPAN KE SUPABASE!");
+      }
+    } catch (err) {
+      console.error("❌ ERROR KONEKSI:", err);
+    }
+
     setNewForm({ title: "", author: "", fandom: "", linkUrl: "", hint: "", hasNSFW: false });
     setIsAddModalOpen(false);
   };
