@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const INITIAL_AUS = [
   {
@@ -18,6 +18,7 @@ const INITIAL_AUS = [
     isFavorite: true,
     hasNewUpdate: true,
     rating: 5,
+    createdAt: 1700000000000,
     reviews: [
       { id: "r1", user: "@kpop_reader", rating: 5, text: "Baper banget part 40! Wajib baca!", isSpoiler: false },
       { id: "r2", user: "@nctzen_00", rating: 4, text: "Plot twist pas di ending part 42 bikin nangis 😭", isSpoiler: true },
@@ -38,6 +39,7 @@ const INITIAL_AUS = [
     isFavorite: false,
     hasNewUpdate: false,
     rating: 4,
+    createdAt: 1690000000000,
     reviews: [],
   },
 ];
@@ -45,6 +47,8 @@ const INITIAL_AUS = [
 export default function Home() {
   const [aus, setAus] = useState(INITIAL_AUS);
   const [filter, setFilter] = useState("All");
+  const [fandomFilter, setFandomFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("newest"); // newest, rating, title
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState("dark");
   const [activeTab, setActiveTab] = useState("home");
@@ -55,7 +59,9 @@ export default function Home() {
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [copiedNotification, setCopiedNotification] = useState(false);
+  const [copiedNotification, setCopiedNotification] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Review Form State inside Modal
   const [newRating, setNewRating] = useState(5);
@@ -117,6 +123,7 @@ export default function Home() {
       isFavorite: false,
       hasNewUpdate: true,
       rating: 5,
+      createdAt: Date.now(),
       reviews: [],
     };
 
@@ -192,12 +199,48 @@ export default function Home() {
     }
   };
 
+  // Backup & Restore Logic
+  const handleExportJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(aus, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `ficpick_backup_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast("💾 File Backup Binder Berhasil Diunduh!");
+  };
+
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (e.target.files && e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], "UTF-8");
+      fileReader.onload = (event) => {
+        try {
+          const parsedData = JSON.parse(event.target?.result as string);
+          if (Array.isArray(parsedData)) {
+            saveToStorage(parsedData);
+            showToast("📥 Binder Berhasil Dipulihkan!");
+          } else {
+            alert("Format file JSON tidak valid.");
+          }
+        } catch (err) {
+          alert("Gagal membaca file backup.");
+        }
+      };
+    }
+  };
+
   const handleShareBinder = () => {
     const titles = aus.map((a, i) => `${i + 1}. ${a.title} (${a.fandom}) - ${a.status}`).join("\n");
     const textToCopy = `✨ Rak Buku AU FicPick Saya ✨\n\n${titles}\n\nDisimpan rapi di FicPick ✨`;
     navigator.clipboard.writeText(textToCopy);
-    setCopiedNotification(true);
-    setTimeout(() => setCopiedNotification(false), 3000);
+    showToast("📋 Ringkasan Binder Berhasil Disalin!");
+  };
+
+  const showToast = (msg: string) => {
+    setCopiedNotification(msg);
+    setTimeout(() => setCopiedNotification(""), 3000);
   };
 
   const changeTheme = (newTheme: string) => {
@@ -232,30 +275,48 @@ export default function Home() {
     return "text-pink-500";
   };
 
-  // Filter & Search Logic
-  const filteredAus = aus.filter((au) => {
-    const matchesStatus =
-      activeTab === "fav"
-        ? au.isFavorite
-        : filter === "All"
-        ? true
-        : filter === "Favorites"
-        ? au.isFavorite
-        : au.status === filter;
+  // Filter, Fandom, & Sorting Logic
+  const allFandoms = Array.from(new Set(aus.map((a) => a.fandom.split("/")[0].trim())));
 
-    const matchesSearch =
-      au.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      au.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      au.fandom.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const filteredAus = aus
+    .filter((au) => {
+      const matchesStatus =
+        activeTab === "fav"
+          ? au.isFavorite
+          : filter === "All"
+          ? true
+          : filter === "Favorites"
+          ? au.isFavorite
+          : au.status === filter;
+
+      const matchesFandom =
+        fandomFilter === "All" || au.fandom.toLowerCase().includes(fandomFilter.toLowerCase());
+
+      const matchesSearch =
+        au.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        au.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        au.fandom.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesStatus && matchesFandom && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+      return (b.createdAt || 0) - (a.createdAt || 0); // newest default
+    });
+
+  // Stats calculation
+  const totalAU = aus.length;
+  const readingCount = aus.filter((a) => a.status === "Reading").length;
+  const finishedCount = aus.filter((a) => a.status === "Finished").length;
+  const hintCount = aus.filter((a) => a.hint && a.hint.trim() !== "").length;
 
   return (
     <main className={`min-h-screen ${getThemeBg()} text-slate-100 p-4 md:p-8 pb-24 md:pb-8 font-sans transition-colors duration-300`}>
-      {/* Toast Notification Copy */}
+      {/* Toast Notification */}
       {copiedNotification && (
         <div className="fixed top-5 right-5 z-50 bg-emerald-500 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold animate-bounce flex items-center gap-2">
-          📋 Ringkasan Binder Berhasil Disalin ke Clipboard!
+          {copiedNotification}
         </div>
       )}
 
@@ -264,12 +325,12 @@ export default function Home() {
         <h1 className={`text-2xl font-bold tracking-tight ${getAccentColor()} flex items-center gap-2`}>
           ✨ FicPick
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
-            Alpha v0.7
+            Alpha v0.8
           </span>
         </h1>
 
         <div className="flex items-center gap-3">
-          {/* Theme Palette Switcher */}
+          {/* Theme Switcher */}
           <div className="hidden sm:flex items-center gap-1 bg-slate-900 p-1 rounded-full border border-slate-800">
             <button
               onClick={() => changeTheme("dark")}
@@ -314,8 +375,28 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Dashboard Ringkasan / Stats */}
+      <section className="max-w-5xl mx-auto my-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5">
+          <p className="text-slate-400 text-[11px] font-semibold">TOTAL AU</p>
+          <p className="text-2xl font-black text-slate-100">{totalAU}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5">
+          <p className="text-amber-400 text-[11px] font-semibold">SEDANG DIBACA</p>
+          <p className="text-2xl font-black text-amber-300">{readingCount}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5">
+          <p className="text-emerald-400 text-[11px] font-semibold">TAMAT</p>
+          <p className="text-2xl font-black text-emerald-300">{finishedCount}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5">
+          <p className="text-pink-400 text-[11px] font-semibold">HINT PRIVATTER</p>
+          <p className="text-2xl font-black text-pink-300">{hintCount}</p>
+        </div>
+      </section>
+
       {/* Hero Section */}
-      <section className="max-w-3xl mx-auto text-center py-8 space-y-4">
+      <section className="max-w-3xl mx-auto text-center py-4 space-y-4">
         <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
           Rak Buku AU Twitter & Fiksi Favoritmu
         </h2>
@@ -323,27 +404,46 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        <div className="pt-2 flex flex-wrap justify-center gap-3">
+        <div className="pt-2 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-white rounded-xl hover:opacity-90 text-sm transition shadow-lg shadow-pink-500/20 active:scale-95"
+            className="px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-white rounded-xl hover:opacity-90 text-sm transition shadow-lg shadow-pink-500/20 active:scale-95"
           >
-            ✨ + Simpan AU Baru ke Binder
+            ✨ + Simpan AU Baru
           </button>
           <button
             onClick={handleShareBinder}
-            className="px-4 py-3.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 font-semibold text-slate-200 rounded-xl text-sm transition flex items-center gap-2"
+            className="px-4 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 font-semibold text-slate-200 rounded-xl text-xs transition"
           >
-            📤 Bagikan Binder
+            📤 Share Binder
           </button>
+          <button
+            onClick={handleExportJSON}
+            className="px-4 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 font-semibold text-slate-200 rounded-xl text-xs transition"
+          >
+            💾 Backup JSON
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-4 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 font-semibold text-slate-200 rounded-xl text-xs transition"
+          >
+            📥 Import Backup
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportJSON}
+            accept=".json"
+            className="hidden"
+          />
         </div>
       </section>
 
       {/* Main Content: Shelf Binder */}
-      <section className="max-w-5xl mx-auto space-y-6">
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+      <section className="max-w-5xl mx-auto space-y-6 pt-4">
+        {/* Search, Sort, & Fandom Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             <h3 className="text-lg font-bold text-slate-200">
               {activeTab === "fav" ? "❤️ AU Favorit Saya" : "Binder Saya"}
             </h3>
@@ -352,21 +452,48 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Search Input */}
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="🔍 Cari judul, author, fandom..."
-              className="w-full sm:w-52 px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
+              placeholder="🔍 Cari..."
+              className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500 w-36"
             />
 
-            <div className="flex gap-1.5 w-full sm:w-auto overflow-x-auto">
+            {/* Dropdown Fandom */}
+            <select
+              value={fandomFilter}
+              onChange={(e) => setFandomFilter(e.target.value)}
+              className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-pink-500"
+            >
+              <option value="All">🎭 Semua Fandom</option>
+              {allFandoms.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+
+            {/* Dropdown Sort */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-pink-500"
+            >
+              <option value="newest">🕒 Terbaru</option>
+              <option value="rating">★ Rating Tertinggi</option>
+              <option value="title">🔤 Judul (A-Z)</option>
+            </select>
+
+            {/* Filter Status Tabs */}
+            <div className="flex gap-1 overflow-x-auto">
               {["All", "Favorites", "Reading", "Finished", "Plan to Read"].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
                     filter === status
                       ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
                       : "text-slate-400 hover:bg-slate-900"
@@ -411,14 +538,12 @@ export default function Home() {
                     {au.status}
                   </span>
 
-                  {/* Badge Notifikasi New Update */}
                   {au.hasNewUpdate && (
                     <span className="absolute bottom-3 left-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider animate-pulse shadow-lg">
                       NEW UPDATE! 🔥
                     </span>
                   )}
 
-                  {/* Tombol Favorit Heart */}
                   <button
                     onClick={(e) => toggleFavorite(au.id, e)}
                     className="absolute bottom-3 right-3 p-2 bg-black/60 backdrop-blur-md rounded-full text-sm hover:scale-110 transition"
@@ -436,10 +561,15 @@ export default function Home() {
                 {/* Detail AU */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[11px] font-semibold text-pink-400 uppercase tracking-wider">
-                      {au.fandom}
-                    </span>
-                    <h4 className="font-bold text-slate-100 text-base leading-snug line-clamp-1 group-hover:text-pink-400 transition">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-pink-400 uppercase tracking-wider">
+                        {au.fandom}
+                      </span>
+                      <span className="text-amber-400 text-xs font-bold">
+                        ★ {au.rating || 5}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-slate-100 text-base leading-snug line-clamp-1 group-hover:text-pink-400 transition mt-0.5">
                       {au.title}
                     </h4>
                     <p className="text-xs text-slate-400 mt-0.5">{au.author}</p>
@@ -551,7 +681,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* MODAL Detail AU + Review System */}
+      {/* MODAL Detail AU */}
       {selectedAU && !isReaderMode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-8">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative my-auto">
@@ -637,7 +767,6 @@ export default function Home() {
             <div className="border-t border-slate-800 pt-3 space-y-3">
               <h4 className="text-xs font-bold text-slate-300">Ulasan Pembaca ({selectedAU.reviews?.length || 0})</h4>
 
-              {/* Form Tambah Review */}
               <form onSubmit={handleAddReview} className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] text-slate-400">Beri Rating:</span>
@@ -682,7 +811,6 @@ export default function Home() {
                 </div>
               </form>
 
-              {/* List Review */}
               <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
                 {selectedAU.reviews?.map((rev: any) => (
                   <div key={rev.id} className="bg-slate-950/60 p-2.5 rounded-lg text-xs space-y-1">
