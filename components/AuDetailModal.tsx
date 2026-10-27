@@ -2,7 +2,6 @@ import { AU } from "@/types/au";
 
 interface AuDetailModalProps {
   selectedAU: AU | null;
-  isReaderMode: boolean;
   onClose: () => void;
   onChangeStatus: (status: string) => void;
   isEditingProgress: boolean;
@@ -19,13 +18,11 @@ interface AuDetailModalProps {
   onAddReview: (e: React.FormEvent) => void;
   showSpoilers: { [key: string]: boolean };
   setShowSpoilers: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
-  onOpenReaderMode: () => void;
   onDeleteAU: (id: string) => void;
 }
 
 export default function AuDetailModal({
   selectedAU,
-  isReaderMode,
   onClose,
   onChangeStatus,
   isEditingProgress,
@@ -42,189 +39,209 @@ export default function AuDetailModal({
   onAddReview,
   showSpoilers,
   setShowSpoilers,
-  onOpenReaderMode,
   onDeleteAU,
 }: AuDetailModalProps) {
-  if (!selectedAU || isReaderMode) return null;
+  if (!selectedAU) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-8">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative my-auto">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold"
-        >
-          ✕
-        </button>
-
-        <span className="text-xs font-semibold text-pink-400 uppercase">
-          {selectedAU.fandom}
-        </span>
-        <h3 className="text-xl font-bold text-slate-100">{selectedAU.title}</h3>
-        <p className="text-xs text-slate-400">Karya oleh {selectedAU.author}</p>
-
-        <div className="space-y-1">
-          <label className="text-[10px] font-semibold text-slate-500 uppercase">
-            Ubah Status Bacaan:
-          </label>
-          <div className="flex gap-2">
-            {["Reading", "Finished", "Plan to Read"].map((st) => (
-              <button
-                key={st}
-                onClick={() => onChangeStatus(st)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  selectedAU.status === st
-                    ? "bg-pink-600 text-white"
-                    : "bg-slate-950 text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-          <div className="flex justify-between items-center">
-            <p className="text-slate-500 text-[11px] font-semibold">JEJAK BACA TERAKHIR:</p>
-            <button
-              onClick={() => setIsEditingProgress(!isEditingProgress)}
-              className="text-xs text-pink-400 hover:underline"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto py-8">
+      <div className="bg-[#ece9d8] border-2 border-black rounded-t-lg max-w-md w-full shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative my-auto overflow-hidden">
+        
+        {/* Retro Title Bar */}
+        <div className="bg-gradient-to-r from-[#000080] via-[#1084d0] to-[#000080] text-white px-2.5 py-1 text-xs font-bold flex justify-between items-center border-b-2 border-black select-none">
+          <span className="truncate flex items-center gap-1.5 font-mono">
+            💾 AU_Properties.exe
+          </span>
+          <div className="flex gap-1">
+            <button className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center">
+              _
+            </button>
+            <button className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center">
+              ◽
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-3.5 h-3.5 bg-[#ece9d8] border border-black text-black text-[9px] font-black flex items-center justify-center hover:bg-red-500 hover:text-white"
             >
-              {isEditingProgress ? "Batal" : "✏️ Edit"}
+              ✕
             </button>
           </div>
+        </div>
 
-          {isEditingProgress ? (
-            <div className="flex gap-2">
+        {/* Content Body */}
+        <div className="p-5 space-y-4 font-sans text-black">
+          {/* Header Info */}
+          <div>
+            <span className="text-[10px] font-extrabold uppercase bg-white border border-black px-2 py-0.5 text-black font-mono">
+              {selectedAU.fandom}
+            </span>
+            <div className="mt-2 inline-block bg-[#b5ff36] border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] max-w-full">
+              <h3 className="text-lg font-black leading-tight text-black truncate">
+                {selectedAU.title}
+              </h3>
+            </div>
+            <p className="text-xs font-bold text-slate-700 mt-1">Karya oleh {selectedAU.author}</p>
+          </div>
+
+          {/* Ubah Status Bacaan */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-700 uppercase font-mono">
+              UBAH STATUS BACAAN:
+            </label>
+            <div className="flex gap-1.5">
+              {["Reading", "Finished", "Plan to Read"].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => onChangeStatus(st)}
+                  className={`flex-1 py-1.5 border-2 border-black text-xs font-black transition ${
+                    selectedAU.status === st
+                      ? "bg-[#b5ff36] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      : "bg-white text-slate-800 hover:bg-slate-100 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Jejak Baca Terakhir */}
+          <div className="bg-white border-2 border-black p-3 shadow-inner space-y-1.5">
+            <div className="flex justify-between items-center">
+              <p className="text-slate-600 text-[10px] font-black uppercase font-mono">
+                JEJAK BACA TERAKHIR:
+              </p>
+              <button
+                onClick={() => setIsEditingProgress(!isEditingProgress)}
+                className="text-xs font-black text-blue-700 hover:underline"
+              >
+                {isEditingProgress ? "Batal" : "✏️ Edit"}
+              </button>
+            </div>
+
+            {isEditingProgress ? (
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="text"
+                  defaultValue={selectedAU.lastChapter}
+                  onChange={(e) => setNewProgress(e.target.value)}
+                  placeholder="Contoh: Part 45 - Berantem lagi"
+                  className="flex-1 px-2.5 py-1 bg-white border-2 border-black text-xs font-mono font-bold text-black focus:outline-none"
+                />
+                <button
+                  onClick={onUpdateChapter}
+                  className="px-3 py-1 bg-[#b5ff36] border-2 border-black text-black font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                >
+                  Simpan
+                </button>
+              </div>
+            ) : (
+              <p className="text-black text-xs font-bold font-mono truncate">{selectedAU.lastChapter}</p>
+            )}
+          </div>
+
+          {/* Hint Privatter */}
+          {selectedAU.hint && (
+            <div className="bg-amber-100 border-2 border-black p-2.5 text-xs text-black space-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <p className="font-black flex items-center gap-1 font-mono text-[10px] text-amber-900 uppercase">
+                🔒 Hint Password (Privatter / Eksternal):
+              </p>
+              <p className="italic font-bold">{selectedAU.hint}</p>
+            </div>
+          )}
+
+          {/* Seksi Review & Rating */}
+          <div className="border-t-2 border-black pt-3 space-y-2.5">
+            <h4 className="text-xs font-black text-black font-mono uppercase">
+              Ulasan Pembaca ({selectedAU.reviews?.length || 0})
+            </h4>
+
+            <form onSubmit={onAddReview} className="space-y-2 bg-white p-3 border-2 border-black shadow-inner">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-slate-700 uppercase font-mono">Beri Rating:</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      type="button"
+                      key={star}
+                      onClick={() => setNewRating(star)}
+                      className={`text-sm ${star <= newRating ? "text-amber-500" : "text-slate-300"}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <input
                 type="text"
-                defaultValue={selectedAU.lastChapter}
-                onChange={(e) => setNewProgress(e.target.value)}
-                placeholder="Contoh: Part 45 - Berantem lagi"
-                className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-pink-500"
+                placeholder="Tulis ulasan singkat..."
+                value={newReviewText}
+                onChange={(e) => setNewReviewText(e.target.value)}
+                className="w-full px-2.5 py-1 bg-white border-2 border-black text-xs font-medium text-black focus:outline-none"
               />
-              <button
-                onClick={onUpdateChapter}
-                className="px-3 py-1.5 bg-pink-600 text-white text-xs rounded-lg font-semibold"
-              >
-                Simpan
-              </button>
-            </div>
-          ) : (
-            <p className="text-slate-200 text-sm font-medium">{selectedAU.lastChapter}</p>
-          )}
-        </div>
 
-        {selectedAU.hint && (
-          <div className="bg-pink-950/40 border border-pink-500/30 p-3 rounded-xl text-xs text-pink-200 space-y-1">
-            <p className="font-bold flex items-center gap-1 text-pink-400">
-              🔒 Hint Password (Privatter / Eksternal):
-            </p>
-            <p className="italic">{selectedAU.hint}</p>
-          </div>
-        )}
-
-        {/* Ulasan & Rating */}
-        <div className="border-t border-slate-800 pt-3 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300">
-            Ulasan Pembaca ({selectedAU.reviews?.length || 0})
-          </h4>
-
-          <form onSubmit={onAddReview} className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] text-slate-400">Beri Rating:</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    type="button"
-                    key={star}
-                    onClick={() => setNewRating(star)}
-                    className={`text-sm ${star <= newRating ? "text-amber-400" : "text-slate-700"}`}
-                  >
-                    ★
-                  </button>
-                ))}
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isSpoilerReview}
+                    onChange={(e) => setIsSpoilerReview(e.target.checked)}
+                    className="accent-black"
+                  />
+                  Mengandung Spoiler!
+                </label>
+                <button
+                  type="submit"
+                  className="px-3 py-1 bg-[#ece9d8] hover:bg-slate-200 text-black border-2 border-black text-xs font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                >
+                  Kirim Review
+                </button>
               </div>
-            </div>
+            </form>
 
-            <input
-              type="text"
-              placeholder="Tulis ulasan singkat..."
-              value={newReviewText}
-              onChange={(e) => setNewReviewText(e.target.value)}
-              className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
-            />
-
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isSpoilerReview}
-                  onChange={(e) => setIsSpoilerReview(e.target.checked)}
-                  className="rounded text-pink-600 focus:ring-pink-500"
-                />
-                Mengandung Spoiler!
-              </label>
-              <button
-                type="submit"
-                className="px-3 py-1 bg-pink-600 text-white text-xs font-semibold rounded-lg hover:bg-pink-500 transition"
-              >
-                Kirim Review
-              </button>
-            </div>
-          </form>
-
-          <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
-            {selectedAU.reviews?.map((rev) => (
-              <div key={rev.id} className="bg-slate-950/60 p-2.5 rounded-lg text-xs space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-pink-400">{rev.user}</span>
-                  <span className="text-amber-400 text-[10px]">{"★".repeat(rev.rating)}</span>
-                </div>
-
-                {rev.isSpoiler ? (
-                  <div>
-                    {showSpoilers[rev.id] ? (
-                      <p className="text-slate-300 italic">{rev.text}</p>
-                    ) : (
-                      <button
-                        onClick={() => setShowSpoilers({ ...showSpoilers, [rev.id]: true })}
-                        className="text-[10px] text-pink-400 bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30 hover:underline"
-                      >
-                        ⚠️ Mengandung Spoiler! (Klik untuk lihat)
-                      </button>
-                    )}
+            <div className="max-h-32 overflow-y-auto space-y-2 pr-1">
+              {selectedAU.reviews?.map((rev) => (
+                <div key={rev.id} className="bg-white p-2 border border-black text-xs space-y-0.5">
+                  <div className="flex justify-between items-center">
+                    <span className="font-black text-black">{rev.user}</span>
+                    <span className="text-amber-500 text-[10px]">{"★".repeat(rev.rating)}</span>
                   </div>
-                ) : (
-                  <p className="text-slate-300">{rev.text}</p>
-                )}
-              </div>
-            ))}
+
+                  {rev.isSpoiler ? (
+                    <div>
+                      {showSpoilers[rev.id] ? (
+                        <p className="text-slate-800 italic">{rev.text}</p>
+                      ) : (
+                        <button
+                          onClick={() => setShowSpoilers({ ...showSpoilers, [rev.id]: true })}
+                          className="text-[10px] text-red-700 bg-red-100 px-1.5 py-0.5 border border-black font-bold hover:underline"
+                        >
+                          ⚠️ Mengandung Spoiler! (Klik untuk lihat)
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-slate-800 font-medium">{rev.text}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="pt-2 flex flex-col gap-2">
-          <button
-            onClick={onOpenReaderMode}
-            className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl text-sm transition hover:opacity-90 flex items-center justify-center gap-2"
-          >
-            📖 Buka Mode Baca (Reader Mode)
-          </button>
-
-          <div className="flex gap-2">
+          {/* Action Buttons Langsung */}
+          <div className="pt-2 flex gap-2">
             <a
               href={selectedAU.linkUrl || "#"}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 py-2.5 text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-xl text-xs transition"
+              className="flex-1 py-2.5 text-center bg-[#b5ff36] hover:bg-[#a3eb25] text-black font-black border-2 border-black text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-1.5"
             >
-              🔗 Link Twitter Asli
+              🚀 Buka Link Twitter / X
             </a>
             <button
               onClick={() => onDeleteAU(selectedAU.id)}
-              className="px-4 py-2.5 bg-red-950/60 border border-red-500/30 text-red-400 hover:bg-red-900/60 rounded-xl text-xs font-semibold transition"
+              className="px-3.5 py-2.5 bg-red-500 hover:bg-red-600 text-white font-black border-2 border-black text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
             >
               🗑️ Hapus
             </button>

@@ -26,29 +26,35 @@ export default function FilterBar({
   setFilter,
 }: FilterBarProps) {
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-[#ece9d8] border-2 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Label Kiri */}
       <div className="flex items-center gap-2 w-full md:w-auto">
-        <h3 className="text-lg font-bold text-slate-200">
-          {activeTab === "fav" ? "❤️ AU Favorit Saya" : "Binder Saya"}
-        </h3>
-        <span className="text-xs bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">
+        <div className="bg-[#b5ff36] border border-black px-2.5 py-0.5 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+          <h3 className="text-sm font-black text-black">
+            {activeTab === "fav" ? "❤️ AU Favorit" : "📂 Binder Saya"}
+          </h3>
+        </div>
+        <span className="text-xs bg-white border border-black text-black px-2 py-0.5 font-mono font-bold shadow-inner">
           {filteredCount} cerita
         </span>
       </div>
 
+      {/* Kontrol Input & Filter */}
       <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        {/* Input Search */}
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="🔍 Cari..."
-          className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500 w-36"
+          className="px-2.5 py-1 bg-white border-2 border-black text-xs font-mono font-bold text-black focus:outline-none focus:ring-1 focus:ring-black shadow-inner w-36"
         />
 
+        {/* Dropdown Fandom */}
         <select
           value={fandomFilter}
           onChange={(e) => setFandomFilter(e.target.value)}
-          className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-pink-500"
+          className="px-2 py-1 bg-white border-2 border-black text-xs font-bold text-black focus:outline-none shadow-inner"
         >
           <option value="All">🎭 Semua Fandom</option>
           {allFandoms.map((f) => (
@@ -58,25 +64,27 @@ export default function FilterBar({
           ))}
         </select>
 
+        {/* Dropdown Sort */}
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 focus:outline-none focus:border-pink-500"
+          className="px-2 py-1 bg-white border-2 border-black text-xs font-bold text-black focus:outline-none shadow-inner"
         >
           <option value="newest">🕒 Terbaru</option>
           <option value="rating">★ Rating Tertinggi</option>
           <option value="title">🔤 Judul (A-Z)</option>
         </select>
 
-        <div className="flex gap-1 overflow-x-auto">
+        {/* Tab Filter Status */}
+        <div className="flex gap-1 overflow-x-auto pt-1 md:pt-0">
           {["All", "Favorites", "Reading", "Finished", "Plan to Read"].map((status) => (
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
+              className={`px-2 py-1 text-[11px] font-bold border border-black transition shrink-0 ${
                 filter === status
-                  ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
-                  : "text-slate-400 hover:bg-slate-900"
+                  ? "bg-[#b5ff36] text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                  : "bg-white text-slate-700 hover:bg-slate-200"
               }`}
             >
               {status === "Favorites" ? "❤️ Favorit" : status}

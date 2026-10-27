@@ -12,7 +12,6 @@ import FilterBar from "@/components/FilterBar";
 import AuCard from "@/components/AuCard";
 import AddAuModal from "@/components/AddAuModal";
 import AuDetailModal from "@/components/AuDetailModal";
-import ReaderModeModal from "@/components/ReaderModeModal";
 import LoginModal from "@/components/LoginModal";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -27,7 +26,6 @@ export default function Home() {
 
   // Modal States
   const [selectedAU, setSelectedAU] = useState<AU | null>(null);
-  const [isReaderMode, setIsReaderMode] = useState(false);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -300,7 +298,7 @@ export default function Home() {
     });
 
   return (
-    <main className={`min-h-screen ${getThemeBg()} text-slate-100 p-4 md:p-8 pb-24 md:pb-8 font-sans transition-colors duration-300`}>
+    <main className="min-h-screen bg-gradient-to-b from-[#7cb9e8] via-[#a2d2ff] via-70% to-[#4e9f3d] text-slate-900 p-4 md:p-8 pb-24 md:pb-8 font-sans selection:bg-[#b5ff36]">
       {copiedNotification && (
         <div className="fixed top-5 right-5 z-50 bg-emerald-500 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold animate-bounce flex items-center gap-2">
           {copiedNotification}
@@ -379,7 +377,6 @@ export default function Home() {
 
       <AuDetailModal
         selectedAU={selectedAU}
-        isReaderMode={isReaderMode}
         onClose={() => {
           setSelectedAU(null);
           setIsEditingProgress(false);
@@ -399,14 +396,7 @@ export default function Home() {
         onAddReview={handleAddReview}
         showSpoilers={showSpoilers}
         setShowSpoilers={setShowSpoilers}
-        onOpenReaderMode={() => setIsReaderMode(true)}
         onDeleteAU={handleDeleteAU}
-      />
-
-      <ReaderModeModal
-        selectedAU={selectedAU}
-        isReaderMode={isReaderMode}
-        onClose={() => setIsReaderMode(false)}
       />
 
       <LoginModal

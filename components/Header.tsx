@@ -8,62 +8,44 @@ interface HeaderProps {
 }
 
 export default function Header({
-  theme,
-  changeTheme,
-  getAccentColor,
   username,
   onOpenLogin,
   onLogout,
 }: HeaderProps) {
   return (
-    <header className="max-w-5xl mx-auto flex justify-between items-center py-4 border-b border-slate-800">
-      <h1 className={`text-2xl font-bold tracking-tight ${getAccentColor()} flex items-center gap-2`}>
-        ✨ FicPick
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
-          Alpha v0.8
-        </span>
-      </h1>
-
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1 bg-slate-900 p-1 rounded-full border border-slate-800">
-          <button
-            onClick={() => changeTheme("dark")}
-            title="Default Dark"
-            className={`w-5 h-5 rounded-full bg-pink-500 ${theme === "dark" ? "ring-2 ring-white" : ""}`}
-          />
-          <button
-            onClick={() => changeTheme("seventeen")}
-            title="Rose Quartz & Serenity (SVT)"
-            className={`w-5 h-5 rounded-full bg-gradient-to-r from-pink-300 to-sky-300 ${theme === "seventeen" ? "ring-2 ring-white" : ""}`}
-          />
-          <button
-            onClick={() => changeTheme("nct")}
-            title="Pearl Neo Champagne (NCT)"
-            className={`w-5 h-5 rounded-full bg-lime-400 ${theme === "nct" ? "ring-2 ring-white" : ""}`}
-          />
-          <button
-            onClick={() => changeTheme("bts")}
-            title="Borahae Purple (BTS)"
-            className={`w-5 h-5 rounded-full bg-purple-500 ${theme === "bts" ? "ring-2 ring-white" : ""}`}
-          />
+    <header className="max-w-5xl mx-auto mb-6 bg-[#ece9d8] border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2.5 flex justify-between items-center">
+      {/* Title Bar Left */}
+      <div className="flex items-center gap-2">
+        <div className="bg-[#b5ff36] border border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <h1 className="text-lg font-black text-black tracking-tight">
+            💻 FicPick.exe
+          </h1>
         </div>
+        <span className="text-[10px] font-mono bg-white border border-black px-2 py-0.5">
+          v0.8-retro
+        </span>
+      </div>
 
+      {/* Control Right */}
+      <div className="flex items-center gap-3">
         {username ? (
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium ${getAccentColor()}`}>🌸 {username}</span>
+            <span className="text-xs font-bold text-black bg-white border border-black px-2.5 py-1">
+              👤 {username}
+            </span>
             <button
               onClick={onLogout}
-              className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition"
+              className="px-3 py-1 text-xs bg-slate-200 hover:bg-slate-300 text-black font-bold border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5"
             >
-              Keluar
+              Exit
             </button>
           </div>
         ) : (
           <button
             onClick={onOpenLogin}
-            className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white rounded-full transition shadow-lg"
+            className="px-4 py-1.5 text-xs font-black bg-[#b5ff36] hover:bg-[#9de022] text-black border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
           >
-            Masuk / Akun
+            🔑 LOG IN
           </button>
         )}
       </div>
