@@ -37,14 +37,25 @@ export default function Home() {
   const [aus, setAus] = useState(INITIAL_AUS);
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [inputUrl, setInputUrl] = useState("");
-  const [theme, setTheme] = useState("dark"); // dark, seventeen, nct, bts
+  const [theme, setTheme] = useState("dark");
+  const [activeTab, setActiveTab] = useState("home"); // home, binder, fav, profile
 
   // Modal States
   const [selectedAU, setSelectedAU] = useState<any>(null);
   const [isReaderMode, setIsReaderMode] = useState(false);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Form State untuk Tambah AU Detail
+  const [newForm, setNewForm] = useState({
+    title: "",
+    author: "",
+    fandom: "",
+    linkUrl: "",
+    hint: "",
+    hasNSFW: false,
+  });
 
   // Login State
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -71,27 +82,29 @@ export default function Home() {
     localStorage.setItem("ficpick_aus", JSON.stringify(newAus));
   };
 
-  const handleAddAU = () => {
-    if (!inputUrl.trim()) return;
+  const handleAddAU = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newForm.title.trim()) return;
 
     const newAU = {
       id: Date.now().toString(),
-      title: inputUrl.includes("http") ? "AU Baru dari Twitter" : inputUrl,
-      author: "@author_ficpick",
-      fandom: "K-Pop / AU",
+      title: newForm.title,
+      author: newForm.author || "@author_au",
+      fandom: newForm.fandom || "K-Pop AU",
       status: "Plan to Read",
       lastChapter: "Part 1 - Baru Ditambahkan",
       coverUrl: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
-      hasNSFW: inputUrl.toLowerCase().includes("privatter") || false,
-      hint: "Password / Hint dari Tweet",
-      linkUrl: inputUrl,
-      contentSnippet: "Chapter pertama baru saja dimulai...",
+      hasNSFW: newForm.hasNSFW,
+      hint: newForm.hint || "",
+      linkUrl: newForm.linkUrl || "https://twitter.com",
+      contentSnippet: "Cerita baru saja dimulai...",
       isFavorite: false,
     };
 
     const updated = [newAU, ...aus];
     saveToStorage(updated);
-    setInputUrl("");
+    setNewForm({ title: "", author: "", fandom: "", linkUrl: "", hint: "", hasNSFW: false });
+    setIsAddModalOpen(false);
   };
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
@@ -153,7 +166,6 @@ export default function Home() {
     localStorage.removeItem("ficpick_user");
   };
 
-  // Dynamic Class sesuai tema
   const getThemeBg = () => {
     if (theme === "seventeen") return "bg-slate-950 border-pink-300/20";
     if (theme === "nct") return "bg-slate-950 border-lime-400/20";
@@ -171,7 +183,9 @@ export default function Home() {
   // Filter & Search Logic
   const filteredAus = aus.filter((au) => {
     const matchesStatus =
-      filter === "All"
+      activeTab === "fav"
+        ? au.isFavorite
+        : filter === "All"
         ? true
         : filter === "Favorites"
         ? au.isFavorite
@@ -185,13 +199,13 @@ export default function Home() {
   });
 
   return (
-    <main className={`min-h-screen ${getThemeBg()} text-slate-100 p-4 md:p-8 font-sans transition-colors duration-300`}>
+    <main className={`min-h-screen ${getThemeBg()} text-slate-100 p-4 md:p-8 pb-24 md:pb-8 font-sans transition-colors duration-300`}>
       {/* Header / Navbar */}
       <header className="max-w-5xl mx-auto flex justify-between items-center py-4 border-b border-slate-800">
         <h1 className={`text-2xl font-bold tracking-tight ${getAccentColor()} flex items-center gap-2`}>
           ✨ FicPick
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
-            Alpha v0.5
+            Alpha v0.6
           </span>
         </h1>
 
@@ -250,20 +264,13 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        {/* Input Bar */}
-        <div className="pt-2 max-w-xl mx-auto flex gap-2">
-          <input
-            type="text"
-            value={inputUrl}
-            onChange={(e) => setInputUrl(e.target.value)}
-            placeholder="Ketik judul atau paste link tweet AU..."
-            className="flex-1 px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-pink-500 text-sm text-slate-200 placeholder-slate-500"
-          />
+        {/* Tombol Buka Modal Tambah AU */}
+        <div className="pt-2">
           <button
-            onClick={handleAddAU}
-            className="px-5 py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-semibold text-white rounded-xl hover:opacity-90 text-sm transition shrink-0 active:scale-95"
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-white rounded-xl hover:opacity-90 text-sm transition shadow-lg shadow-pink-500/20 active:scale-95"
           >
-            + Tambah AU
+            ✨ + Simpan AU Baru ke Binder
           </button>
         </div>
       </section>
@@ -273,7 +280,9 @@ export default function Home() {
         {/* Search & Filter Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <h3 className="text-lg font-bold text-slate-200">Binder Saya</h3>
+            <h3 className="text-lg font-bold text-slate-200">
+              {activeTab === "fav" ? "❤️ AU Favorit Saya" : "Binder Saya"}
+            </h3>
             <span className="text-xs bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">
               {filteredAus.length} cerita
             </span>
@@ -311,7 +320,7 @@ export default function Home() {
         {/* Grid Kartu AU */}
         {filteredAus.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm space-y-2">
-            <p>😴 Belum ada AU yang cocok dengan pencarianmu.</p>
+            <p>😴 Belum ada AU yang cocok di binder kamu.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -374,11 +383,106 @@ export default function Home() {
                 </div>
               </div>
             ))}
-        </div>
+          </div>
         )}
       </section>
 
-      {/* MODAL 1: Detail AU */}
+      {/* MODAL: Form Tambah AU Detail */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => setIsAddModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-bold text-slate-100">Simpan AU Baru ✨</h3>
+
+            <form onSubmit={handleAddAU} className="space-y-3 pt-2">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Judul AU *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Project High School"
+                  value={newForm.title}
+                  onChange={(e) => setNewForm({ ...newForm, title: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Author / Username</label>
+                  <input
+                    type="text"
+                    placeholder="@starryskies"
+                    value={newForm.author}
+                    onChange={(e) => setNewForm({ ...newForm, author: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Fandom / Cast</label>
+                  <input
+                    type="text"
+                    placeholder="NCT / Jaemin"
+                    value={newForm.fandom}
+                    onChange={(e) => setNewForm({ ...newForm, fandom: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Link Tweet Twitter</label>
+                <input
+                  type="url"
+                  placeholder="https://x.com/username/status/..."
+                  value={newForm.linkUrl}
+                  onChange={(e) => setNewForm({ ...newForm, linkUrl: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-pink-400 block mb-1">🔒 Hint Password (Privatter/Telegraph)</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Tanggal debut grup (DDMMYY)"
+                  value={newForm.hint}
+                  onChange={(e) => setNewForm({ ...newForm, hint: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-950 border border-pink-500/30 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="nsfwCheck"
+                  checked={newForm.hasNSFW}
+                  onChange={(e) => setNewForm({ ...newForm, hasNSFW: e.target.checked })}
+                  className="rounded text-pink-600 focus:ring-pink-500"
+                />
+                <label htmlFor="nsfwCheck" className="text-xs text-slate-300">
+                  Ada Konten Dewasa / Privatter (18+)
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-semibold text-white rounded-xl text-sm hover:opacity-90 transition mt-3"
+              >
+                + Masukkan ke Binder
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL Detail AU */}
       {selectedAU && !isReaderMode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
@@ -398,7 +502,6 @@ export default function Home() {
             <h3 className="text-xl font-bold text-slate-100">{selectedAU.title}</h3>
             <p className="text-xs text-slate-400">Karya oleh {selectedAU.author}</p>
 
-            {/* Ubah Status Bacaan */}
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-slate-500 uppercase">
                 Ubah Status Bacaan:
@@ -420,7 +523,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Box Jejak Baca */}
             <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
               <div className="flex justify-between items-center">
                 <p className="text-slate-500 text-[11px] font-semibold">JEJAK BACA TERAKHIR:</p>
@@ -453,7 +555,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Hint Password Box */}
             {selectedAU.hint && (
               <div className="bg-pink-950/40 border border-pink-500/30 p-3 rounded-xl text-xs text-pink-200 space-y-1">
                 <p className="font-bold flex items-center gap-1 text-pink-400">
@@ -463,7 +564,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="pt-2 flex flex-col gap-2">
               <button
                 onClick={() => setIsReaderMode(true)}
@@ -493,7 +593,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* MODAL 2: Reader Mode */}
+      {/* MODAL Reader Mode */}
       {selectedAU && isReaderMode && (
         <div className="fixed inset-0 bg-slate-950 z-50 overflow-y-auto p-4 md:p-8">
           <div className="max-w-2xl mx-auto space-y-6 py-6">
@@ -531,7 +631,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* MODAL 3: Login */}
+      {/* MODAL Login */}
       {isLoginOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
@@ -578,6 +678,38 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* MOBILE BOTTOM NAVIGATION BAR (KHUSUS TAMPILAN HP) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 py-2.5 px-6 flex justify-around items-center md:hidden z-40">
+        <button
+          onClick={() => setActiveTab("home")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "home" ? "text-pink-400 font-bold" : "text-slate-400"}`}
+        >
+          <span className="text-lg">🏠</span>
+          <span className="text-[10px]">Home</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("binder")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "binder" ? "text-pink-400 font-bold" : "text-slate-400"}`}
+        >
+          <span className="text-lg">📚</span>
+          <span className="text-[10px]">Binder</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("fav")}
+          className={`flex flex-col items-center gap-1 ${activeTab === "fav" ? "text-pink-400 font-bold" : "text-slate-400"}`}
+        >
+          <span className="text-lg">❤️</span>
+          <span className="text-[10px]">Favorit</span>
+        </button>
+        <button
+          onClick={() => setIsLoginOpen(true)}
+          className={`flex flex-col items-center gap-1 ${username ? "text-pink-400" : "text-slate-400"}`}
+        >
+          <span className="text-lg">👤</span>
+          <span className="text-[10px]">{username ? "Akun" : "Masuk"}</span>
+        </button>
+      </nav>
     </main>
   );
 }
