@@ -15,6 +15,7 @@ const INITIAL_AUS = [
     hint: "Tanggal ultah Mark (DDMMYY)",
     linkUrl: "https://twitter.com",
     contentSnippet: "Hujan makin deras di luar gerbang sekolah. Jaemin natap gue dingin sambil ngelipat tangannya di dada. 'Kan udah gue bilang, jangan nungguin gue...' ucapnya pelan tapi menohok.",
+    isFavorite: true,
   },
   {
     id: "2",
@@ -28,6 +29,7 @@ const INITIAL_AUS = [
     hint: "",
     linkUrl: "https://twitter.com",
     contentSnippet: "Pagi-pagi pintu kosan udah digedor sama Mingyu yang cuma pake kaos oblong sambil nenteng mangkok isi bubur ayam. 'Nih, dimakan biar gak pingsan pas kuliah,' katanya acuh tak acuh.",
+    isFavorite: false,
   },
 ];
 
@@ -36,13 +38,14 @@ export default function Home() {
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [inputUrl, setInputUrl] = useState("");
-  
+  const [theme, setTheme] = useState("dark"); // dark, seventeen, nct, bts
+
   // Modal States
   const [selectedAU, setSelectedAU] = useState<any>(null);
   const [isReaderMode, setIsReaderMode] = useState(false);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
-  
+
   // Login State
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -58,6 +61,9 @@ export default function Home() {
     }
     const savedUser = localStorage.getItem("ficpick_user");
     if (savedUser) setUsername(savedUser);
+
+    const savedTheme = localStorage.getItem("ficpick_theme");
+    if (savedTheme) setTheme(savedTheme);
   }, []);
 
   const saveToStorage = (newAus: typeof INITIAL_AUS) => {
@@ -80,11 +86,20 @@ export default function Home() {
       hint: "Password / Hint dari Tweet",
       linkUrl: inputUrl,
       contentSnippet: "Chapter pertama baru saja dimulai...",
+      isFavorite: false,
     };
 
     const updated = [newAU, ...aus];
     saveToStorage(updated);
     setInputUrl("");
+  };
+
+  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = aus.map((item) =>
+      item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
+    );
+    saveToStorage(updated);
   };
 
   const handleUpdateChapter = () => {
@@ -120,6 +135,11 @@ export default function Home() {
     }
   };
 
+  const changeTheme = (newTheme: string) => {
+    setTheme(newTheme);
+    localStorage.setItem("ficpick_theme", newTheme);
+  };
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const mockUser = "Tsania (K-pop Fan)";
@@ -133,9 +153,30 @@ export default function Home() {
     localStorage.removeItem("ficpick_user");
   };
 
+  // Dynamic Class sesuai tema
+  const getThemeBg = () => {
+    if (theme === "seventeen") return "bg-slate-950 border-pink-300/20";
+    if (theme === "nct") return "bg-slate-950 border-lime-400/20";
+    if (theme === "bts") return "bg-slate-950 border-purple-500/20";
+    return "bg-slate-950 border-slate-800";
+  };
+
+  const getAccentColor = () => {
+    if (theme === "seventeen") return "text-pink-300";
+    if (theme === "nct") return "text-lime-400";
+    if (theme === "bts") return "text-purple-400";
+    return "text-pink-500";
+  };
+
   // Filter & Search Logic
   const filteredAus = aus.filter((au) => {
-    const matchesStatus = filter === "All" || au.status === filter;
+    const matchesStatus =
+      filter === "All"
+        ? true
+        : filter === "Favorites"
+        ? au.isFavorite
+        : au.status === filter;
+
     const matchesSearch =
       au.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       au.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,34 +185,60 @@ export default function Home() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
+    <main className={`min-h-screen ${getThemeBg()} text-slate-100 p-4 md:p-8 font-sans transition-colors duration-300`}>
       {/* Header / Navbar */}
       <header className="max-w-5xl mx-auto flex justify-between items-center py-4 border-b border-slate-800">
-        <h1 className="text-2xl font-bold tracking-tight text-pink-500 flex items-center gap-2">
+        <h1 className={`text-2xl font-bold tracking-tight ${getAccentColor()} flex items-center gap-2`}>
           ✨ FicPick
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
-            Alpha v0.4
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
+            Alpha v0.5
           </span>
         </h1>
 
-        {username ? (
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-pink-400 font-medium">🌸 {username}</span>
+        <div className="flex items-center gap-3">
+          {/* Theme Palette Switcher */}
+          <div className="hidden sm:flex items-center gap-1 bg-slate-900 p-1 rounded-full border border-slate-800">
             <button
-              onClick={handleLogout}
-              className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition"
-            >
-              Keluar
-            </button>
+              onClick={() => changeTheme("dark")}
+              title="Default Dark"
+              className={`w-5 h-5 rounded-full bg-pink-500 ${theme === "dark" ? "ring-2 ring-white" : ""}`}
+            />
+            <button
+              onClick={() => changeTheme("seventeen")}
+              title="Rose Quartz & Serenity (SVT)"
+              className={`w-5 h-5 rounded-full bg-gradient-to-r from-pink-300 to-sky-300 ${theme === "seventeen" ? "ring-2 ring-white" : ""}`}
+            />
+            <button
+              onClick={() => changeTheme("nct")}
+              title="Pearl Neo Champagne (NCT)"
+              className={`w-5 h-5 rounded-full bg-lime-400 ${theme === "nct" ? "ring-2 ring-white" : ""}`}
+            />
+            <button
+              onClick={() => changeTheme("bts")}
+              title="Borahae Purple (BTS)"
+              className={`w-5 h-5 rounded-full bg-purple-500 ${theme === "bts" ? "ring-2 ring-white" : ""}`}
+            />
           </div>
-        ) : (
-          <button
-            onClick={() => setIsLoginOpen(true)}
-            className="px-4 py-2 text-sm font-medium bg-pink-600 hover:bg-pink-500 text-white rounded-full transition shadow-lg shadow-pink-500/20"
-          >
-            Masuk / Akun
-          </button>
-        )}
+
+          {username ? (
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-medium ${getAccentColor()}`}>🌸 {username}</span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition"
+              >
+                Keluar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsLoginOpen(true)}
+              className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white rounded-full transition shadow-lg"
+            >
+              Masuk / Akun
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Hero Section */}
@@ -219,12 +286,12 @@ export default function Home() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 Cari judul, author, fandom..."
-              className="w-full sm:w-56 px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
+              className="w-full sm:w-52 px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
             />
 
             {/* Filter Tabs */}
             <div className="flex gap-1.5 w-full sm:w-auto overflow-x-auto">
-              {["All", "Reading", "Finished", "Plan to Read"].map((status) => (
+              {["All", "Favorites", "Reading", "Finished", "Plan to Read"].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilter(status)}
@@ -234,7 +301,7 @@ export default function Home() {
                       : "text-slate-400 hover:bg-slate-900"
                   }`}
                 >
-                  {status}
+                  {status === "Favorites" ? "❤️ Favorit" : status}
                 </button>
               ))}
             </div>
@@ -252,7 +319,7 @@ export default function Home() {
               <div
                 key={au.id}
                 onClick={() => setSelectedAU(au)}
-                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-pink-500/40 transition group flex flex-col justify-between cursor-pointer"
+                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-pink-500/40 transition group flex flex-col justify-between cursor-pointer relative"
               >
                 {/* Cover Image */}
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-800">
@@ -272,6 +339,14 @@ export default function Home() {
                   >
                     {au.status}
                   </span>
+
+                  {/* Tombol Favorit Heart */}
+                  <button
+                    onClick={(e) => toggleFavorite(au.id, e)}
+                    className="absolute bottom-3 right-3 p-2 bg-black/60 backdrop-blur-md rounded-full text-sm hover:scale-110 transition"
+                  >
+                    {au.isFavorite ? "❤️" : "🤍"}
+                  </button>
 
                   {au.hasNSFW && (
                     <span className="absolute top-3 right-3 bg-red-500/90 text-white px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wider">
@@ -299,11 +374,11 @@ export default function Home() {
                 </div>
               </div>
             ))}
-          </div>
+        </div>
         )}
       </section>
 
-      {/* MODAL 1: Detail & Action AU */}
+      {/* MODAL 1: Detail AU */}
       {selectedAU && !isReaderMode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
@@ -418,11 +493,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* MODAL 2: Reader Mode (Mode Membaca Nyaman) */}
+      {/* MODAL 2: Reader Mode */}
       {selectedAU && isReaderMode && (
         <div className="fixed inset-0 bg-slate-950 z-50 overflow-y-auto p-4 md:p-8">
           <div className="max-w-2xl mx-auto space-y-6 py-6">
-            {/* Top Bar Reader */}
             <div className="flex justify-between items-center border-b border-slate-800 pb-4 sticky top-0 bg-slate-950/90 backdrop-blur-md pt-2">
               <button
                 onClick={() => setIsReaderMode(false)}
@@ -433,7 +507,6 @@ export default function Home() {
               <span className="text-xs text-slate-500">Mode Membaca Bebas Iklan ✨</span>
             </div>
 
-            {/* Content Area */}
             <div className="space-y-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
               <span className="text-xs font-semibold text-pink-400 uppercase">
                 {selectedAU.fandom}
@@ -443,15 +516,10 @@ export default function Home() {
                 Ditulis oleh {selectedAU.author} • {selectedAU.lastChapter}
               </p>
 
-              {/* Isi Cerita / Thread */}
               <div className="py-4 text-slate-200 text-base leading-relaxed space-y-4 font-serif">
                 <p>{selectedAU.contentSnippet}</p>
-                <p className="text-slate-400 text-sm italic">
-                  (Simulasi Reader Mode: Di versi rilis nanti, bagian ini akan membaca otomatis seluruh thread Twitter author secara bersih dan nyaman).
-                </p>
               </div>
 
-              {/* Hint Box inside reader */}
               {selectedAU.hint && (
                 <div className="bg-pink-950/40 border border-pink-500/30 p-4 rounded-2xl text-xs text-pink-200 space-y-1">
                   <p className="font-bold text-pink-400">🔑 Hint Privatter/Telegraph:</p>
