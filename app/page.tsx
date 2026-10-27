@@ -34,12 +34,16 @@ export default function Home() {
   const [filter, setFilter] = useState("All");
   const [inputUrl, setInputUrl] = useState("");
   
-  // State Modal Detail AU & Login
+  // State Modal Detail AU & Edit
   const [selectedAU, setSelectedAU] = useState<any>(null);
+  const [isEditingProgress, setIsEditingProgress] = useState(false);
+  const [newProgress, setNewProgress] = useState("");
+  
+  // State Login
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
 
-  // 1. Muat data dari LocalStorage saat pertama buka
+  // Muat data dari LocalStorage
   useEffect(() => {
     const savedAus = localStorage.getItem("ficpick_aus");
     if (savedAus) {
@@ -53,7 +57,7 @@ export default function Home() {
     if (savedUser) setUsername(savedUser);
   }, []);
 
-  // Simpan data ke LocalStorage tiap ada perubahan
+  // Simpan data ke LocalStorage
   const saveToStorage = (newAus: typeof INITIAL_AUS) => {
     setAus(newAus);
     localStorage.setItem("ficpick_aus", JSON.stringify(newAus));
@@ -65,14 +69,14 @@ export default function Home() {
 
     const newAU = {
       id: Date.now().toString(),
-      title: inputUrl.includes("http") ? "AU Baru dari Link Twitter" : inputUrl,
+      title: inputUrl.includes("http") ? "AU Baru dari Twitter" : inputUrl,
       author: "@author_ficpick",
       fandom: "K-Pop / AU",
       status: "Plan to Read",
       lastChapter: "Part 1 - Baru Ditambahkan",
       coverUrl: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
       hasNSFW: inputUrl.toLowerCase().includes("privatter") || false,
-      hint: "Password default / Cek tweet author",
+      hint: "Password / Hint dari Tweet",
       linkUrl: inputUrl,
     };
 
@@ -81,7 +85,42 @@ export default function Home() {
     setInputUrl("");
   };
 
-  // Simulasi Login
+  // Update Jejak Baca (Last Chapter)
+  const handleUpdateChapter = () => {
+    if (!selectedAU || !newProgress.trim()) return;
+
+    const updatedAus = aus.map((item) =>
+      item.id === selectedAU.id ? { ...item, lastChapter: newProgress } : item
+    );
+
+    saveToStorage(updatedAus);
+    setSelectedAU({ ...selectedAU, lastChapter: newProgress });
+    setIsEditingProgress(false);
+    setNewProgress("");
+  };
+
+  // Ubah Status Bacaan (Reading/Finished/Plan to Read)
+  const handleChangeStatus = (newStatus: string) => {
+    if (!selectedAU) return;
+
+    const updatedAus = aus.map((item) =>
+      item.id === selectedAU.id ? { ...item, status: newStatus } : item
+    );
+
+    saveToStorage(updatedAus);
+    setSelectedAU({ ...selectedAU, status: newStatus });
+  };
+
+  // Hapus AU dari Binder
+  const handleDeleteAU = (id: string) => {
+    if (confirm("Yakin mau hapus AU ini dari binder kamu?")) {
+      const updatedAus = aus.filter((item) => item.id !== id);
+      saveToStorage(updatedAus);
+      setSelectedAU(null);
+    }
+  };
+
+  // Login & Logout Mockup
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const mockUser = "Tsania (K-pop Fan)";
@@ -102,13 +141,13 @@ export default function Home() {
         <h1 className="text-2xl font-bold tracking-tight text-pink-500 flex items-center gap-2">
           ✨ FicPick
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
-            Alpha v0.2
+            Alpha v0.3
           </span>
         </h1>
 
         {username ? (
           <div className="flex items-center gap-3">
-            <span className="text-xs text-pink-400 font-medium">🌸 Halo, {username}</span>
+            <span className="text-xs text-pink-400 font-medium">🌸 {username}</span>
             <button
               onClick={handleLogout}
               className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition"
@@ -126,7 +165,7 @@ export default function Home() {
         )}
       </header>
 
-      {/* Hero & Input Section */}
+      {/* Hero Section */}
       <section className="max-w-3xl mx-auto text-center py-10 space-y-4">
         <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
           Rak Buku AU Twitter & Fiksi Favoritmu
@@ -135,7 +174,7 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        {/* Input Bar */}
+        {/* Form Paste Link */}
         <div className="pt-2 max-w-xl mx-auto flex gap-2">
           <input
             type="text"
@@ -235,12 +274,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* MODAL 1: Detail AU & Pop-up Hint Password */}
+      {/* MODAL 1: Detail & Edit AU */}
       {selectedAU && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
             <button
-              onClick={() => setSelectedAU(null)}
+              onClick={() => {
+                setSelectedAU(null);
+                setIsEditingProgress(false);
+              }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold"
             >
               ✕
@@ -252,11 +294,62 @@ export default function Home() {
             <h3 className="text-xl font-bold text-slate-100">{selectedAU.title}</h3>
             <p className="text-xs text-slate-400">Karya oleh {selectedAU.author}</p>
 
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-              <p className="text-slate-500 text-[11px] font-semibold">STATUS BACAAN:</p>
-              <p className="text-slate-200 text-sm font-medium">{selectedAU.lastChapter}</p>
+            {/* Ubah Status Bacaan */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-slate-500 uppercase">
+                Ubah Status Bacaan:
+              </label>
+              <div className="flex gap-2">
+                {["Reading", "Finished", "Plan to Read"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => handleChangeStatus(st)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      selectedAU.status === st
+                        ? "bg-pink-600 text-white"
+                        : "bg-slate-950 text-slate-400 hover:bg-slate-800"
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* Box Jejak Baca */}
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <p className="text-slate-500 text-[11px] font-semibold">JEJAK BACA TERAKHIR:</p>
+                <button
+                  onClick={() => setIsEditingProgress(!isEditingProgress)}
+                  className="text-xs text-pink-400 hover:underline"
+                >
+                  {isEditingProgress ? "Batal" : "✏️ Edit"}
+                </button>
+              </div>
+
+              {isEditingProgress ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    defaultValue={selectedAU.lastChapter}
+                    onChange={(e) => setNewProgress(e.target.value)}
+                    placeholder="Contoh: Part 45 - Berantem lagi"
+                    className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-pink-500"
+                  />
+                  <button
+                    onClick={handleUpdateChapter}
+                    className="px-3 py-1.5 bg-pink-600 text-white text-xs rounded-lg font-semibold"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              ) : (
+                <p className="text-slate-200 text-sm font-medium">{selectedAU.lastChapter}</p>
+              )}
+            </div>
+
+            {/* Hint Password Box */}
             {selectedAU.hint && (
               <div className="bg-pink-950/40 border border-pink-500/30 p-3 rounded-xl text-xs text-pink-200 space-y-1">
                 <p className="font-bold flex items-center gap-1 text-pink-400">
@@ -266,6 +359,7 @@ export default function Home() {
               </div>
             )}
 
+            {/* Action Buttons */}
             <div className="pt-2 flex gap-2">
               <a
                 href={selectedAU.linkUrl || "#"}
@@ -275,12 +369,18 @@ export default function Home() {
               >
                 🚀 Buka Thread Twitter
               </a>
+              <button
+                onClick={() => handleDeleteAU(selectedAU.id)}
+                className="px-4 py-3 bg-red-950/60 border border-red-500/30 text-red-400 hover:bg-red-900/60 rounded-xl text-xs font-semibold transition"
+              >
+                🗑️ Hapus
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL 2: Konsep Login */}
+      {/* MODAL 2: Login */}
       {isLoginOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
