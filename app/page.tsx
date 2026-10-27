@@ -14,6 +14,7 @@ const INITIAL_AUS = [
     hasNSFW: true,
     hint: "Tanggal ultah Mark (DDMMYY)",
     linkUrl: "https://twitter.com",
+    contentSnippet: "Hujan makin deras di luar gerbang sekolah. Jaemin natap gue dingin sambil ngelipat tangannya di dada. 'Kan udah gue bilang, jangan nungguin gue...' ucapnya pelan tapi menohok.",
   },
   {
     id: "2",
@@ -26,24 +27,26 @@ const INITIAL_AUS = [
     hasNSFW: false,
     hint: "",
     linkUrl: "https://twitter.com",
+    contentSnippet: "Pagi-pagi pintu kosan udah digedor sama Mingyu yang cuma pake kaos oblong sambil nenteng mangkok isi bubur ayam. 'Nih, dimakan biar gak pingsan pas kuliah,' katanya acuh tak acuh.",
   },
 ];
 
 export default function Home() {
   const [aus, setAus] = useState(INITIAL_AUS);
   const [filter, setFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [inputUrl, setInputUrl] = useState("");
   
-  // State Modal Detail AU & Edit
+  // Modal States
   const [selectedAU, setSelectedAU] = useState<any>(null);
+  const [isReaderMode, setIsReaderMode] = useState(false);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
   
-  // State Login
+  // Login State
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
 
-  // Muat data dari LocalStorage
   useEffect(() => {
     const savedAus = localStorage.getItem("ficpick_aus");
     if (savedAus) {
@@ -57,13 +60,11 @@ export default function Home() {
     if (savedUser) setUsername(savedUser);
   }, []);
 
-  // Simpan data ke LocalStorage
   const saveToStorage = (newAus: typeof INITIAL_AUS) => {
     setAus(newAus);
     localStorage.setItem("ficpick_aus", JSON.stringify(newAus));
   };
 
-  // Tambah AU Baru
   const handleAddAU = () => {
     if (!inputUrl.trim()) return;
 
@@ -78,6 +79,7 @@ export default function Home() {
       hasNSFW: inputUrl.toLowerCase().includes("privatter") || false,
       hint: "Password / Hint dari Tweet",
       linkUrl: inputUrl,
+      contentSnippet: "Chapter pertama baru saja dimulai...",
     };
 
     const updated = [newAU, ...aus];
@@ -85,7 +87,6 @@ export default function Home() {
     setInputUrl("");
   };
 
-  // Update Jejak Baca (Last Chapter)
   const handleUpdateChapter = () => {
     if (!selectedAU || !newProgress.trim()) return;
 
@@ -99,7 +100,6 @@ export default function Home() {
     setNewProgress("");
   };
 
-  // Ubah Status Bacaan (Reading/Finished/Plan to Read)
   const handleChangeStatus = (newStatus: string) => {
     if (!selectedAU) return;
 
@@ -111,16 +111,15 @@ export default function Home() {
     setSelectedAU({ ...selectedAU, status: newStatus });
   };
 
-  // Hapus AU dari Binder
   const handleDeleteAU = (id: string) => {
     if (confirm("Yakin mau hapus AU ini dari binder kamu?")) {
       const updatedAus = aus.filter((item) => item.id !== id);
       saveToStorage(updatedAus);
       setSelectedAU(null);
+      setIsReaderMode(false);
     }
   };
 
-  // Login & Logout Mockup
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const mockUser = "Tsania (K-pop Fan)";
@@ -134,6 +133,16 @@ export default function Home() {
     localStorage.removeItem("ficpick_user");
   };
 
+  // Filter & Search Logic
+  const filteredAus = aus.filter((au) => {
+    const matchesStatus = filter === "All" || au.status === filter;
+    const matchesSearch =
+      au.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      au.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      au.fandom.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
       {/* Header / Navbar */}
@@ -141,7 +150,7 @@ export default function Home() {
         <h1 className="text-2xl font-bold tracking-tight text-pink-500 flex items-center gap-2">
           ✨ FicPick
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
-            Alpha v0.3
+            Alpha v0.4
           </span>
         </h1>
 
@@ -166,7 +175,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="max-w-3xl mx-auto text-center py-10 space-y-4">
+      <section className="max-w-3xl mx-auto text-center py-8 space-y-4">
         <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
           Rak Buku AU Twitter & Fiksi Favoritmu
         </h2>
@@ -174,7 +183,7 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        {/* Form Paste Link */}
+        {/* Input Bar */}
         <div className="pt-2 max-w-xl mx-auto flex gap-2">
           <input
             type="text"
@@ -194,33 +203,52 @@ export default function Home() {
 
       {/* Main Content: Shelf Binder */}
       <section className="max-w-5xl mx-auto space-y-6">
-        {/* Filter Tab */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 className="text-lg font-bold text-slate-200">
-            Binder Bacaan Saya ({aus.length})
-          </h3>
-          <div className="flex gap-2">
-            {["All", "Reading", "Finished", "Plan to Read"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  filter === status
-                    ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
-                    : "text-slate-400 hover:bg-slate-900"
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+        {/* Search & Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <h3 className="text-lg font-bold text-slate-200">Binder Saya</h3>
+            <span className="text-xs bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">
+              {filteredAus.length} cerita
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {/* Search Input */}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="🔍 Cari judul, author, fandom..."
+              className="w-full sm:w-56 px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
+            />
+
+            {/* Filter Tabs */}
+            <div className="flex gap-1.5 w-full sm:w-auto overflow-x-auto">
+              {["All", "Reading", "Finished", "Plan to Read"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
+                    filter === status
+                      ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
+                      : "text-slate-400 hover:bg-slate-900"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Grid Kartu AU */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {aus
-            .filter((au) => filter === "All" || au.status === filter)
-            .map((au) => (
+        {filteredAus.length === 0 ? (
+          <div className="text-center py-12 text-slate-500 text-sm space-y-2">
+            <p>😴 Belum ada AU yang cocok dengan pencarianmu.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAus.map((au) => (
               <div
                 key={au.id}
                 onClick={() => setSelectedAU(au)}
@@ -271,11 +299,12 @@ export default function Home() {
                 </div>
               </div>
             ))}
-        </div>
+          </div>
+        )}
       </section>
 
-      {/* MODAL 1: Detail & Edit AU */}
-      {selectedAU && (
+      {/* MODAL 1: Detail & Action AU */}
+      {selectedAU && !isReaderMode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
             <button
@@ -360,27 +389,81 @@ export default function Home() {
             )}
 
             {/* Action Buttons */}
-            <div className="pt-2 flex gap-2">
-              <a
-                href={selectedAU.linkUrl || "#"}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 py-3 text-center bg-pink-600 hover:bg-pink-500 text-white font-semibold rounded-xl text-sm transition"
-              >
-                🚀 Buka Thread Twitter
-              </a>
+            <div className="pt-2 flex flex-col gap-2">
               <button
-                onClick={() => handleDeleteAU(selectedAU.id)}
-                className="px-4 py-3 bg-red-950/60 border border-red-500/30 text-red-400 hover:bg-red-900/60 rounded-xl text-xs font-semibold transition"
+                onClick={() => setIsReaderMode(true)}
+                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl text-sm transition hover:opacity-90 flex items-center justify-center gap-2"
               >
-                🗑️ Hapus
+                📖 Buka Mode Baca (Reader Mode)
               </button>
+
+              <div className="flex gap-2">
+                <a
+                  href={selectedAU.linkUrl || "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 py-2.5 text-center bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-xl text-xs transition"
+                >
+                  🔗 Link Twitter Asli
+                </a>
+                <button
+                  onClick={() => handleDeleteAU(selectedAU.id)}
+                  className="px-4 py-2.5 bg-red-950/60 border border-red-500/30 text-red-400 hover:bg-red-900/60 rounded-xl text-xs font-semibold transition"
+                >
+                  🗑️ Hapus
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL 2: Login */}
+      {/* MODAL 2: Reader Mode (Mode Membaca Nyaman) */}
+      {selectedAU && isReaderMode && (
+        <div className="fixed inset-0 bg-slate-950 z-50 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-2xl mx-auto space-y-6 py-6">
+            {/* Top Bar Reader */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4 sticky top-0 bg-slate-950/90 backdrop-blur-md pt-2">
+              <button
+                onClick={() => setIsReaderMode(false)}
+                className="text-xs font-semibold text-pink-400 hover:underline flex items-center gap-1"
+              >
+                ← Kembali ke Binder
+              </button>
+              <span className="text-xs text-slate-500">Mode Membaca Bebas Iklan ✨</span>
+            </div>
+
+            {/* Content Area */}
+            <div className="space-y-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+              <span className="text-xs font-semibold text-pink-400 uppercase">
+                {selectedAU.fandom}
+              </span>
+              <h2 className="text-2xl font-bold text-slate-100">{selectedAU.title}</h2>
+              <p className="text-xs text-slate-400 border-b border-slate-800 pb-4">
+                Ditulis oleh {selectedAU.author} • {selectedAU.lastChapter}
+              </p>
+
+              {/* Isi Cerita / Thread */}
+              <div className="py-4 text-slate-200 text-base leading-relaxed space-y-4 font-serif">
+                <p>{selectedAU.contentSnippet}</p>
+                <p className="text-slate-400 text-sm italic">
+                  (Simulasi Reader Mode: Di versi rilis nanti, bagian ini akan membaca otomatis seluruh thread Twitter author secara bersih dan nyaman).
+                </p>
+              </div>
+
+              {/* Hint Box inside reader */}
+              {selectedAU.hint && (
+                <div className="bg-pink-950/40 border border-pink-500/30 p-4 rounded-2xl text-xs text-pink-200 space-y-1">
+                  <p className="font-bold text-pink-400">🔑 Hint Privatter/Telegraph:</p>
+                  <p className="italic">{selectedAU.hint}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Login */}
       {isLoginOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
