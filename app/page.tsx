@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-// Data simulasi awal AU
 const INITIAL_AUS = [
   {
     id: "1",
@@ -13,7 +12,8 @@ const INITIAL_AUS = [
     lastChapter: "Part 42 - Berantem di Hujan",
     coverUrl: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=500&q=80",
     hasNSFW: true,
-    hint: "Password: Tanggal ultah Mark (DDMMYY)",
+    hint: "Tanggal ultah Mark (DDMMYY)",
+    linkUrl: "https://twitter.com",
   },
   {
     id: "2",
@@ -25,6 +25,7 @@ const INITIAL_AUS = [
     coverUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=500&q=80",
     hasNSFW: false,
     hint: "",
+    linkUrl: "https://twitter.com",
   },
 ];
 
@@ -32,25 +33,66 @@ export default function Home() {
   const [aus, setAus] = useState(INITIAL_AUS);
   const [filter, setFilter] = useState("All");
   const [inputUrl, setInputUrl] = useState("");
+  
+  // State Modal Detail AU & Login
+  const [selectedAU, setSelectedAU] = useState<any>(null);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
-  // Fungsi untuk menambah AU baru ke dalam binder
+  // 1. Muat data dari LocalStorage saat pertama buka
+  useEffect(() => {
+    const savedAus = localStorage.getItem("ficpick_aus");
+    if (savedAus) {
+      try {
+        setAus(JSON.parse(savedAus));
+      } catch (e) {
+        console.error("Gagal muat data", e);
+      }
+    }
+    const savedUser = localStorage.getItem("ficpick_user");
+    if (savedUser) setUsername(savedUser);
+  }, []);
+
+  // Simpan data ke LocalStorage tiap ada perubahan
+  const saveToStorage = (newAus: typeof INITIAL_AUS) => {
+    setAus(newAus);
+    localStorage.setItem("ficpick_aus", JSON.stringify(newAus));
+  };
+
+  // Tambah AU Baru
   const handleAddAU = () => {
     if (!inputUrl.trim()) return;
 
     const newAU = {
       id: Date.now().toString(),
       title: inputUrl.includes("http") ? "AU Baru dari Link Twitter" : inputUrl,
-      author: "@author_baru",
+      author: "@author_ficpick",
       fandom: "K-Pop / AU",
       status: "Plan to Read",
       lastChapter: "Part 1 - Baru Ditambahkan",
       coverUrl: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=500&q=80",
-      hasNSFW: false,
-      hint: "Belum ada hint",
+      hasNSFW: inputUrl.toLowerCase().includes("privatter") || false,
+      hint: "Password default / Cek tweet author",
+      linkUrl: inputUrl,
     };
 
-    setAus([newAU, ...aus]); // Tambahkan ke paling atas binder
-    setInputUrl(""); // Kosongkan kolom input
+    const updated = [newAU, ...aus];
+    saveToStorage(updated);
+    setInputUrl("");
+  };
+
+  // Simulasi Login
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const mockUser = "Tsania (K-pop Fan)";
+    setUsername(mockUser);
+    localStorage.setItem("ficpick_user", mockUser);
+    setIsLoginOpen(false);
+  };
+
+  const handleLogout = () => {
+    setUsername(null);
+    localStorage.removeItem("ficpick_user");
   };
 
   return (
@@ -60,12 +102,28 @@ export default function Home() {
         <h1 className="text-2xl font-bold tracking-tight text-pink-500 flex items-center gap-2">
           ✨ FicPick
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
-            Alpha v0.1
+            Alpha v0.2
           </span>
         </h1>
-        <button className="px-4 py-2 text-sm font-medium bg-pink-600 hover:bg-pink-500 text-white rounded-full transition shadow-lg shadow-pink-500/20">
-          Masuk / Akun
-        </button>
+
+        {username ? (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-pink-400 font-medium">🌸 Halo, {username}</span>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition"
+            >
+              Keluar
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsLoginOpen(true)}
+            className="px-4 py-2 text-sm font-medium bg-pink-600 hover:bg-pink-500 text-white rounded-full transition shadow-lg shadow-pink-500/20"
+          >
+            Masuk / Akun
+          </button>
+        )}
       </header>
 
       {/* Hero & Input Section */}
@@ -77,7 +135,7 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        {/* Form Paste Link AU */}
+        {/* Input Bar */}
         <div className="pt-2 max-w-xl mx-auto flex gap-2">
           <input
             type="text"
@@ -126,7 +184,8 @@ export default function Home() {
             .map((au) => (
               <div
                 key={au.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-pink-500/40 transition group flex flex-col justify-between"
+                onClick={() => setSelectedAU(au)}
+                className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-pink-500/40 transition group flex flex-col justify-between cursor-pointer"
               >
                 {/* Cover Image */}
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-800">
@@ -170,17 +229,104 @@ export default function Home() {
                     <p className="text-slate-500 text-[10px] font-semibold">JEJAK BACA TERAKHIR:</p>
                     <p className="text-slate-300 font-medium truncate">{au.lastChapter}</p>
                   </div>
-
-                  {au.hint && (
-                    <div className="bg-pink-950/30 border border-pink-500/20 p-2 rounded-lg text-[11px] text-pink-300 flex items-center gap-1.5">
-                      🔒 <span>{au.hint}</span>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
         </div>
       </section>
+
+      {/* MODAL 1: Detail AU & Pop-up Hint Password */}
+      {selectedAU && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => setSelectedAU(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold"
+            >
+              ✕
+            </button>
+
+            <span className="text-xs font-semibold text-pink-400 uppercase">
+              {selectedAU.fandom}
+            </span>
+            <h3 className="text-xl font-bold text-slate-100">{selectedAU.title}</h3>
+            <p className="text-xs text-slate-400">Karya oleh {selectedAU.author}</p>
+
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
+              <p className="text-slate-500 text-[11px] font-semibold">STATUS BACAAN:</p>
+              <p className="text-slate-200 text-sm font-medium">{selectedAU.lastChapter}</p>
+            </div>
+
+            {selectedAU.hint && (
+              <div className="bg-pink-950/40 border border-pink-500/30 p-3 rounded-xl text-xs text-pink-200 space-y-1">
+                <p className="font-bold flex items-center gap-1 text-pink-400">
+                  🔒 Hint Password (Privatter / Eksternal):
+                </p>
+                <p className="italic">{selectedAU.hint}</p>
+              </div>
+            )}
+
+            <div className="pt-2 flex gap-2">
+              <a
+                href={selectedAU.linkUrl || "#"}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-3 text-center bg-pink-600 hover:bg-pink-500 text-white font-semibold rounded-xl text-sm transition"
+              >
+                🚀 Buka Thread Twitter
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Konsep Login */}
+      {isLoginOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => setIsLoginOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-lg font-bold"
+            >
+              ✕
+            </button>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-xl font-bold text-slate-100">Masuk ke FicPick ✨</h3>
+              <p className="text-xs text-slate-400">
+                Simpan rak buku AU favoritmu secara permanen
+              </p>
+            </div>
+
+            <form onSubmit={handleLoginSubmit} className="space-y-3 pt-2">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Username / Email</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="KpopLover123"
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-pink-500"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 font-semibold text-white rounded-xl text-sm hover:opacity-90 transition mt-2"
+              >
+                Masuk Sekarang
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
