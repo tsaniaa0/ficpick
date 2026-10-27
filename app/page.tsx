@@ -16,6 +16,12 @@ const INITIAL_AUS = [
     linkUrl: "https://twitter.com",
     contentSnippet: "Hujan makin deras di luar gerbang sekolah. Jaemin natap gue dingin sambil ngelipat tangannya di dada. 'Kan udah gue bilang, jangan nungguin gue...' ucapnya pelan tapi menohok.",
     isFavorite: true,
+    hasNewUpdate: true,
+    rating: 5,
+    reviews: [
+      { id: "r1", user: "@kpop_reader", rating: 5, text: "Baper banget part 40! Wajib baca!", isSpoiler: false },
+      { id: "r2", user: "@nctzen_00", rating: 4, text: "Plot twist pas di ending part 42 bikin nangis 😭", isSpoiler: true },
+    ],
   },
   {
     id: "2",
@@ -30,6 +36,9 @@ const INITIAL_AUS = [
     linkUrl: "https://twitter.com",
     contentSnippet: "Pagi-pagi pintu kosan udah digedor sama Mingyu yang cuma pake kaos oblong sambil nenteng mangkok isi bubur ayam. 'Nih, dimakan biar gak pingsan pas kuliah,' katanya acuh tak acuh.",
     isFavorite: false,
+    hasNewUpdate: false,
+    rating: 4,
+    reviews: [],
   },
 ];
 
@@ -38,7 +47,7 @@ export default function Home() {
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState("dark");
-  const [activeTab, setActiveTab] = useState("home"); // home, binder, fav, profile
+  const [activeTab, setActiveTab] = useState("home");
 
   // Modal States
   const [selectedAU, setSelectedAU] = useState<any>(null);
@@ -46,6 +55,13 @@ export default function Home() {
   const [isEditingProgress, setIsEditingProgress] = useState(false);
   const [newProgress, setNewProgress] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [copiedNotification, setCopiedNotification] = useState(false);
+
+  // Review Form State inside Modal
+  const [newRating, setNewRating] = useState(5);
+  const [newReviewText, setNewReviewText] = useState("");
+  const [isSpoilerReview, setIsSpoilerReview] = useState(false);
+  const [showSpoilers, setShowSpoilers] = useState<{ [key: string]: boolean }>({});
 
   // Form State untuk Tambah AU Detail
   const [newForm, setNewForm] = useState({
@@ -99,6 +115,9 @@ export default function Home() {
       linkUrl: newForm.linkUrl || "https://twitter.com",
       contentSnippet: "Cerita baru saja dimulai...",
       isFavorite: false,
+      hasNewUpdate: true,
+      rating: 5,
+      reviews: [],
     };
 
     const updated = [newAU, ...aus];
@@ -115,15 +134,40 @@ export default function Home() {
     saveToStorage(updated);
   };
 
+  const handleAddReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAU || !newReviewText.trim()) return;
+
+    const newRev = {
+      id: Date.now().toString(),
+      user: username || "@pembaca_anonim",
+      rating: newRating,
+      text: newReviewText,
+      isSpoiler: isSpoilerReview,
+    };
+
+    const updatedReviews = [...(selectedAU.reviews || []), newRev];
+    const updatedAus = aus.map((item) =>
+      item.id === selectedAU.id ? { ...item, reviews: updatedReviews } : item
+    );
+
+    saveToStorage(updatedAus);
+    setSelectedAU({ ...selectedAU, reviews: updatedReviews });
+    setNewReviewText("");
+    setIsSpoilerReview(false);
+  };
+
   const handleUpdateChapter = () => {
     if (!selectedAU || !newProgress.trim()) return;
 
     const updatedAus = aus.map((item) =>
-      item.id === selectedAU.id ? { ...item, lastChapter: newProgress } : item
+      item.id === selectedAU.id
+        ? { ...item, lastChapter: newProgress, hasNewUpdate: false }
+        : item
     );
 
     saveToStorage(updatedAus);
-    setSelectedAU({ ...selectedAU, lastChapter: newProgress });
+    setSelectedAU({ ...selectedAU, lastChapter: newProgress, hasNewUpdate: false });
     setIsEditingProgress(false);
     setNewProgress("");
   };
@@ -146,6 +190,14 @@ export default function Home() {
       setSelectedAU(null);
       setIsReaderMode(false);
     }
+  };
+
+  const handleShareBinder = () => {
+    const titles = aus.map((a, i) => `${i + 1}. ${a.title} (${a.fandom}) - ${a.status}`).join("\n");
+    const textToCopy = `✨ Rak Buku AU FicPick Saya ✨\n\n${titles}\n\nDisimpan rapi di FicPick ✨`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedNotification(true);
+    setTimeout(() => setCopiedNotification(false), 3000);
   };
 
   const changeTheme = (newTheme: string) => {
@@ -200,12 +252,19 @@ export default function Home() {
 
   return (
     <main className={`min-h-screen ${getThemeBg()} text-slate-100 p-4 md:p-8 pb-24 md:pb-8 font-sans transition-colors duration-300`}>
+      {/* Toast Notification Copy */}
+      {copiedNotification && (
+        <div className="fixed top-5 right-5 z-50 bg-emerald-500 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold animate-bounce flex items-center gap-2">
+          📋 Ringkasan Binder Berhasil Disalin ke Clipboard!
+        </div>
+      )}
+
       {/* Header / Navbar */}
       <header className="max-w-5xl mx-auto flex justify-between items-center py-4 border-b border-slate-800">
         <h1 className={`text-2xl font-bold tracking-tight ${getAccentColor()} flex items-center gap-2`}>
           ✨ FicPick
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
-            Alpha v0.6
+            Alpha v0.7
           </span>
         </h1>
 
@@ -264,13 +323,18 @@ export default function Home() {
           Tandai jejak bacaan, simpan *hint password*, dan lanjut baca tanpa pusing ketumpuk!
         </p>
 
-        {/* Tombol Buka Modal Tambah AU */}
-        <div className="pt-2">
+        <div className="pt-2 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-6 py-3.5 bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-white rounded-xl hover:opacity-90 text-sm transition shadow-lg shadow-pink-500/20 active:scale-95"
           >
             ✨ + Simpan AU Baru ke Binder
+          </button>
+          <button
+            onClick={handleShareBinder}
+            className="px-4 py-3.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 font-semibold text-slate-200 rounded-xl text-sm transition flex items-center gap-2"
+          >
+            📤 Bagikan Binder
           </button>
         </div>
       </section>
@@ -289,7 +353,6 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            {/* Search Input */}
             <input
               type="text"
               value={searchQuery}
@@ -298,7 +361,6 @@ export default function Home() {
               className="w-full sm:w-52 px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
             />
 
-            {/* Filter Tabs */}
             <div className="flex gap-1.5 w-full sm:w-auto overflow-x-auto">
               {["All", "Favorites", "Reading", "Finished", "Plan to Read"].map((status) => (
                 <button
@@ -348,6 +410,13 @@ export default function Home() {
                   >
                     {au.status}
                   </span>
+
+                  {/* Badge Notifikasi New Update */}
+                  {au.hasNewUpdate && (
+                    <span className="absolute bottom-3 left-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider animate-pulse shadow-lg">
+                      NEW UPDATE! 🔥
+                    </span>
+                  )}
 
                   {/* Tombol Favorit Heart */}
                   <button
@@ -482,10 +551,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* MODAL Detail AU */}
+      {/* MODAL Detail AU + Review System */}
       {selectedAU && !isReaderMode && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto py-8">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative my-auto">
             <button
               onClick={() => {
                 setSelectedAU(null);
@@ -564,6 +633,86 @@ export default function Home() {
               </div>
             )}
 
+            {/* SEKSI REVIEWS & RATING */}
+            <div className="border-t border-slate-800 pt-3 space-y-3">
+              <h4 className="text-xs font-bold text-slate-300">Ulasan Pembaca ({selectedAU.reviews?.length || 0})</h4>
+
+              {/* Form Tambah Review */}
+              <form onSubmit={handleAddReview} className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] text-slate-400">Beri Rating:</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        type="button"
+                        key={star}
+                        onClick={() => setNewRating(star)}
+                        className={`text-sm ${star <= newRating ? "text-amber-400" : "text-slate-700"}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Tulis ulasan singkat..."
+                  value={newReviewText}
+                  onChange={(e) => setNewReviewText(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs focus:outline-none focus:border-pink-500"
+                />
+
+                <div className="flex items-center justify-between pt-1">
+                  <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isSpoilerReview}
+                      onChange={(e) => setIsSpoilerReview(e.target.checked)}
+                      className="rounded text-pink-600 focus:ring-pink-500"
+                    />
+                    Mengandung Spoiler!
+                  </label>
+                  <button
+                    type="submit"
+                    className="px-3 py-1 bg-pink-600 text-white text-xs font-semibold rounded-lg hover:bg-pink-500 transition"
+                  >
+                    Kirim Review
+                  </button>
+                </div>
+              </form>
+
+              {/* List Review */}
+              <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
+                {selectedAU.reviews?.map((rev: any) => (
+                  <div key={rev.id} className="bg-slate-950/60 p-2.5 rounded-lg text-xs space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-pink-400">{rev.user}</span>
+                      <span className="text-amber-400 text-[10px]">{"★".repeat(rev.rating)}</span>
+                    </div>
+
+                    {rev.isSpoiler ? (
+                      <div>
+                        {showSpoilers[rev.id] ? (
+                          <p className="text-slate-300 italic">{rev.text}</p>
+                        ) : (
+                          <button
+                            onClick={() => setShowSpoilers({ ...showSpoilers, [rev.id]: true })}
+                            className="text-[10px] text-pink-400 bg-pink-950/60 px-2 py-0.5 rounded border border-pink-500/30 hover:underline"
+                          >
+                            ⚠️ Mengandung Spoiler! (Klik untuk lihat)
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-slate-300">{rev.text}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
             <div className="pt-2 flex flex-col gap-2">
               <button
                 onClick={() => setIsReaderMode(true)}
@@ -679,7 +828,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (KHUSUS TAMPILAN HP) */}
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 py-2.5 px-6 flex justify-around items-center md:hidden z-40">
         <button
           onClick={() => setActiveTab("home")}
