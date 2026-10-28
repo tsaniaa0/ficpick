@@ -98,8 +98,8 @@ export default function AuDetailModal({
             <label className="text-[10px] font-black text-slate-700 uppercase font-mono">
               UBAH STATUS BACAAN:
             </label>
-            <div className="flex gap-1.5">
-              {["Reading", "Finished", "Plan to Read"].map((st) => (
+            <div className="grid grid-cols-3 gap-1.5">
+              {["Reading", "Finished", "Plan to Read", "On Hold", "Dropped"].map((st) => (
                 <button
                   key={st}
                   onClick={() => onChangeStatus(st)}

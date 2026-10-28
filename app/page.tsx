@@ -14,8 +14,16 @@ import AddAuModal from "@/components/AddAuModal";
 import AuDetailModal from "@/components/AuDetailModal";
 import EditAuModal from "@/components/EditAuModal";
 import LoginModal from "@/components/LoginModal";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import Taskbar from "@/components/Taskbar";
+import StickyNote from "@/components/StickyNote";
+import ReadingStatsModal from "@/components/ReadingStatsModal";
+
+const WALLPAPERS = [
+  { name: "Piksel Langit Biru", url: "https://i.pinimg.com/736x/7e/38/1b/7e381b9e7d0030c92a1102fae47b1dba.jpg" },
+  { name: "Malam Kota / Kamar", url: "https://i.pinimg.com/736x/89/65/52/8965529f55e55e8c150c95ef37be9328.jpg" },
+  { name: "Senja Syahdu", url: "https://i.pinimg.com/736x/e2/e5/27/e2e5270665b45a28a1fe676f63ff3d9a.jpg" },
+  { name: "Lanskap Piksel Artsy", url: "https://i.pinimg.com/1200x/09/88/03/098803d0fa866444a3494ad0ad3bb5ff.jpg" },
+];
 
 export default function Home() {
   const [aus, setAus] = useState<AU[]>(INITIAL_AUS);
@@ -23,8 +31,12 @@ export default function Home() {
   const [fandomFilter, setFandomFilter] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [searchQuery, setSearchQuery] = useState("");
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("classic");
   const [activeTab, setActiveTab] = useState("home");
+
+  // States Tambahan
+  const [currentWallpaper, setCurrentWallpaper] = useState(WALLPAPERS[0].url);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   // Modal States
   const [selectedAU, setSelectedAU] = useState<AU | null>(null);
@@ -36,13 +48,14 @@ export default function Home() {
   const [newProgressUrl, setNewProgressUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Review Form State
+  // Review & Login States
   const [newRating, setNewRating] = useState(5);
   const [newReviewText, setNewReviewText] = useState("");
   const [isSpoilerReview, setIsSpoilerReview] = useState(false);
   const [showSpoilers, setShowSpoilers] = useState<{ [key: string]: boolean }>({});
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
-  // Form State
   const [newForm, setNewForm] = useState({
     title: "",
     author: "",
@@ -53,29 +66,75 @@ export default function Home() {
     hasNSFW: false,
   });
 
-  // Login State
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
-
+  // Load dari localStorage & Supabase saat pertama kali dibuka
   useEffect(() => {
-    const savedAus = localStorage.getItem("ficpick_aus");
-    if (savedAus) {
+    const fetchSupabaseAus = async () => {
       try {
-        setAus(JSON.parse(savedAus));
-      } catch (e) {
-        console.error("Gagal muat data", e);
+        const { data, error } = await supabase.from("aus").select("*");
+        if (!error && data && data.length > 0) {
+          const formattedSupabaseData: AU[] = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            author: item.author,
+            fandom: item.fandom,
+            status: item.status,
+            lastChapter: item.last_chapter,
+            coverUrl: item.cover_url,
+            hasNSFW: item.has_nsfw,
+            hint: item.hint,
+            linkUrl: item.link_url,
+            contentSnippet: item.content_snippet,
+            isFavorite: item.is_favorite,
+            hasNewUpdate: item.has_new_update,
+            rating: item.rating,
+            createdAt: item.created_at,
+            reviews: item.reviews || [],
+          }));
+          setAus(formattedSupabaseData);
+          localStorage.setItem("ficpick_aus", JSON.stringify(formattedSupabaseData));
+          return;
+        }
+      } catch (err) {
+        console.log("Menggunakan data lokal localStorage.");
       }
-    }
+
+      const savedAus = localStorage.getItem("ficpick_aus");
+      if (savedAus) {
+        try {
+          setAus(JSON.parse(savedAus));
+        } catch (e) {
+          console.error("Gagal muat data", e);
+        }
+      }
+    };
+
+    fetchSupabaseAus();
+
     const savedUser = localStorage.getItem("ficpick_user");
     if (savedUser) setUsername(savedUser);
 
     const savedTheme = localStorage.getItem("ficpick_theme");
     if (savedTheme) setTheme(savedTheme);
+
+    const savedWallpaper = localStorage.getItem("ficpick_wallpaper");
+    if (savedWallpaper) setCurrentWallpaper(savedWallpaper);
   }, []);
 
   const saveToStorage = (newAus: AU[]) => {
     setAus(newAus);
     localStorage.setItem("ficpick_aus", JSON.stringify(newAus));
+  };
+
+  const handleWallpaperChange = (url: string) => {
+    setCurrentWallpaper(url);
+    localStorage.setItem("ficpick_wallpaper", url);
+    showToast("🖼️ Wallpaper Vibe Berhasil Diganti!");
+  };
+
+  const handleThemeChange = (newTh: string) => {
+    setTheme(newTh);
+    localStorage.setItem("ficpick_theme", newTh);
+    showToast("🎨 Tema Windows Berhasil Diperbarui!");
   };
 
   const handleAddAU = async (e: React.FormEvent) => {
@@ -107,7 +166,7 @@ export default function Home() {
     saveToStorage(updated);
 
     try {
-      const { error } = await supabase.from("aus").insert([
+      await supabase.from("aus").insert([
         {
           id: newAU.id,
           title: newAU.title,
@@ -126,14 +185,9 @@ export default function Home() {
           created_at: newAU.createdAt,
         },
       ]);
-
-      if (error) {
-        console.error("❌ ERROR DARI SUPABASE:", error.message);
-      } else {
-        console.log("✅ BERHASIL SIMPAN KE SUPABASE!");
-      }
+      showToast("✨ AU Berhasil Disimpan ke Cloud!");
     } catch (err) {
-      console.error("❌ ERROR KONEKSI:", err);
+      console.error("Gagal sinkron ke Supabase", err);
     }
 
     setNewForm({
@@ -184,14 +238,26 @@ export default function Home() {
 
     const updatedAus = aus.map((item) =>
       item.id === selectedAU.id
-        ? { ...item, lastChapter: newProgress, hasNewUpdate: false }
+        ? {
+            ...item,
+            lastChapter: newProgress,
+            lastChapterUrl: newProgressUrl || item.lastChapterUrl || "",
+            hasNewUpdate: false,
+          }
         : item
     );
 
     saveToStorage(updatedAus);
-    setSelectedAU({ ...selectedAU, lastChapter: newProgress, hasNewUpdate: false });
+    setSelectedAU({
+      ...selectedAU,
+      lastChapter: newProgress,
+      lastChapterUrl: newProgressUrl || selectedAU.lastChapterUrl || "",
+      hasNewUpdate: false,
+    });
     setIsEditingProgress(false);
     setNewProgress("");
+    setNewProgressUrl("");
+    showToast("📌 Progress Bacaan Diperbarui!");
   };
 
   const handleChangeStatus = (newStatus: string) => {
@@ -210,6 +276,7 @@ export default function Home() {
       const updatedAus = aus.filter((item) => item.id !== id);
       saveToStorage(updatedAus);
       setSelectedAU(null);
+      showToast("🗑️ AU Berhasil Dihapus.");
     }
   };
 
@@ -217,30 +284,7 @@ export default function Home() {
     const updatedAus = aus.map((item) => (item.id === updatedAU.id ? updatedAU : item));
     saveToStorage(updatedAus);
     setSelectedAU(updatedAU);
-
-    try {
-      const { error } = await supabase
-        .from("aus")
-        .update({
-          title: updatedAU.title,
-          author: updatedAU.author,
-          fandom: updatedAU.fandom,
-          cover_url: updatedAU.coverUrl,
-          link_url: updatedAU.linkUrl,
-          hint: updatedAU.hint,
-          has_nsfw: updatedAU.hasNSFW,
-        })
-        .eq("id", updatedAU.id);
-
-      if (error) {
-        console.error("❌ ERROR UPDATE SUPABASE:", error.message);
-      } else {
-        console.log("✅ BERHASIL UPDATE DI SUPABASE!");
-        showToast("✏️ AU Berhasil Diperbarui!");
-      }
-    } catch (err) {
-      console.error("❌ ERROR KONEKSI:", err);
-    }
+    showToast("✏️ AU Berhasil Diperbarui!");
   };
 
   const handleExportJSON = () => {
@@ -252,7 +296,7 @@ export default function Home() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast("💾 File Backup Binder Berhasil Diunduh!");
+    showToast("💾 Backup Binder Berhasil Diunduh!");
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,7 +328,7 @@ export default function Home() {
 
   const showToast = (msg: string) => {
     setCopiedNotification(msg);
-    setTimeout(() => setCopiedNotification(""), 3000);
+    setTimeout(() => setCopiedNotification("3000"), 2000);
   };
 
   const changeTheme = (newTheme: string) => {
@@ -298,20 +342,13 @@ export default function Home() {
     setUsername(mockUser);
     localStorage.setItem("ficpick_user", mockUser);
     setIsLoginOpen(false);
-  };
-
-  const getThemeBg = () => {
-    if (theme === "seventeen") return "bg-slate-950 border-pink-300/20";
-    if (theme === "nct") return "bg-slate-950 border-lime-400/20";
-    if (theme === "bts") return "bg-slate-950 border-purple-500/20";
-    return "bg-slate-950 border-slate-800";
+    showToast(`👋 Selamat datang kembali, ${mockUser}!`);
   };
 
   const getAccentColor = () => {
-    if (theme === "seventeen") return "text-pink-300";
-    if (theme === "nct") return "text-lime-400";
-    if (theme === "bts") return "text-purple-400";
-    return "text-pink-500";
+    if (theme === "rose") return "text-pink-400";
+    if (theme === "lavender") return "text-purple-400";
+    return "text-blue-500";
   };
 
   const allFandoms = Array.from(new Set(aus.map((a) => a.fandom.split("/")[0].trim())));
@@ -344,16 +381,52 @@ export default function Home() {
       return (b.createdAt || 0) - (a.createdAt || 0);
     });
 
+  // Tambahkan fungsi helper di dalam page.tsx untuk menentukan warna tema
+  const getThemeColors = (currentTheme: string) => {
+    switch (currentTheme) {
+      case "rose":
+        return {
+          windowBg: "bg-[#fff0f3]", // Pink muda pastel ala Windows 95 Rose
+          titleBar: "bg-[#800040]", // Ungu/Pink tua klasik
+          accentBtn: "bg-[#ffb3c6] hover:bg-[#ff99b1]",
+          badge: "bg-[#ffb3c6]",
+        };
+      case "lavender":
+        return {
+          windowBg: "bg-[#f3f0ff]", // Lavender muda pastel
+          titleBar: "bg-[#483d8b]", // Dark Slate Blue / Ungu klasik
+          accentBtn: "bg-[#d8b4fe] hover:bg-[#c084fc]",
+          badge: "bg-[#d8b4fe]",
+        };
+      default: // classic (Teal)
+        return {
+          windowBg: "bg-[#ece9d8]", // Krem klasik Windows 95
+          titleBar: "bg-[#000080]", // Biru klasik Windows 95
+          accentBtn: "bg-[#b5ff36] hover:bg-[#a3eb25]",
+          badge: "bg-[#b5ff36]",
+        };
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#7cb9e8] via-[#a2d2ff] via-70% to-[#4e9f3d] text-slate-900 p-4 md:p-8 pb-24 md:pb-16 font-sans relative overflow-x-hidden selection:bg-[#b5ff36]">
+    <main
+      className={`min-h-screen bg-cover bg-center bg-fixed text-slate-900 p-4 md:p-8 pb-24 md:pb-16 font-sans relative overflow-x-hidden selection:bg-[#b5ff36] ${
+        theme === "rose" 
+          ? "theme-rose" 
+          : theme === "lavender" 
+          ? "theme-lavender" 
+          : "theme-classic"
+      }`}
+      style={{ backgroundImage: `url('${currentWallpaper}')` }}
+    >
       {/* Toast Notification */}
       {copiedNotification && (
-        <div className="fixed top-5 right-5 z-50 bg-emerald-500 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold animate-bounce flex items-center gap-2">
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold animate-bounce flex items-center gap-2">
           {copiedNotification}
         </div>
       )}
 
-      {/* DESKTOP SHORTCUTS (Kiri Layar - Khusus Desktop) */}
+      {/* DESKTOP SHORTCUTS */}
       <div className="hidden xl:flex flex-col gap-6 absolute top-8 left-6 z-10 select-none">
         <div className="flex flex-col items-center gap-1 cursor-pointer group w-20 text-center">
           <div className="w-12 h-12 bg-[#ece9d8] border-2 border-black flex items-center justify-center text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#b5ff36]">
@@ -373,29 +446,21 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="flex flex-col items-center gap-1 cursor-pointer group w-20 text-center">
+        <div 
+          onClick={() => setIsStatsOpen(true)}
+          className="flex flex-col items-center gap-1 cursor-pointer group w-20 text-center"
+        >
           <div className="w-12 h-12 bg-[#ece9d8] border-2 border-black flex items-center justify-center text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#b5ff36]">
-            🗑️
+            📊
           </div>
           <span className="text-[11px] font-bold text-black bg-white/90 border border-black px-1">
-            Recycle Bin
+            Statistics
           </span>
         </div>
       </div>
 
-      {/* STICKY NOTE WIDGET (Kanan Layar - Khusus Desktop) */}
-      <div className="hidden xl:block absolute top-20 right-6 z-10 w-56 bg-[#ffffa0] border-2 border-black p-3 shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] rotate-1">
-        <div className="border-b-2 border-black pb-1 mb-2 flex justify-between items-center">
-          <span className="text-[10px] font-black font-mono uppercase text-black">
-            📌 Quick_Notes.txt
-          </span>
-          <span className="text-xs cursor-pointer">✕</span>
-        </div>
-        <p className="text-xs font-mono font-bold text-slate-800 leading-relaxed">
-          • Jgn lupa cek update AU Jaemin jam 8 mlm!⚡
-          <br />• Password Privatter ada di detail card.
-        </p>
-      </div>
+      {/* STICKY NOTE WIDGET INTERAKTIF */}
+      <StickyNote />
 
       {/* KOMPONEN UTAMA WEBSITE */}
       <Header
@@ -438,6 +503,7 @@ export default function Home() {
           setSortBy={setSortBy}
           filter={filter}
           setFilter={setFilter}
+          theme={theme}
         />
 
         {/* Grid Kartu AU / Empty State */}
@@ -460,7 +526,7 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredAus.map((au) => (
               <AuCard
                 key={au.id}
@@ -522,15 +588,31 @@ export default function Home() {
         onSubmit={handleLoginSubmit}
       />
 
-      <MobileBottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        username={username}
-        onOpenLogin={() => setIsLoginOpen(true)}
+      <ReadingStatsModal
+        isOpen={isStatsOpen}
+        onClose={() => setIsStatsOpen(false)}
+        aus={aus}
+        theme={theme} // <-- Tambahkan baris ini agar error garis merahnya hilang
       />
 
-      {/* TASKBAR BOTTOM */}
-      <Taskbar />
+      {/* TASKBAR BOTTOM DENGAN MENU WALLPAPER & TEMA OS */}
+      <Taskbar
+        currentWallpaper={currentWallpaper}
+        onWallpaperChange={handleWallpaperChange}
+        wallpapers={WALLPAPERS}
+        currentTheme={theme}
+        onThemeChange={handleThemeChange}
+        onOpenStats={() => setIsStatsOpen(true)}
+      />
+
+      {/* Floating Action Button (Khusus Mobile di Pojok Bawah) */}
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="md:hidden fixed bottom-5 right-5 z-40 w-14 h-14 bg-[#b5ff36] border-2 border-black rounded-full flex items-center justify-center text-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
+        title="Simpan AU Baru"
+      >
+        ✨
+      </button>
     </main>
   );
 }

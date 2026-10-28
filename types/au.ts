@@ -11,7 +11,7 @@ export interface AU {
   title: string;
   author: string;
   fandom: string;
-  status: string;
+  status: "Reading" | "Finished" | "Plan to Read" | "On Hold" | "Dropped" | string;
   lastChapter: string;
   lastChapterUrl?: string;
   coverUrl: string;
